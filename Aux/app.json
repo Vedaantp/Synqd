@@ -3,6 +3,7 @@
     "name": "Aux",
     "slug": "Aux",
     "version": "1.0.0",
+    "scheme": "auxapp",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -15,16 +16,29 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.Aux",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.Aux"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ec14fa62-1d66-49ae-bdf8-b93f82a75088"
+      }
+    },
+    "plugins": [
+      "expo-router"
+    ]
   }
 }
