@@ -2,6 +2,7 @@ import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image, TextInput } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import io from 'socket.io-client';
+import { router } from 'expo-router';
 
 export default function Page() {
 
@@ -71,14 +72,14 @@ export default function Page() {
 		console.log(username);
 		console.log(userId);
 
-		socket.emit('createServer', { username: username, userId: userId });
+		socket.emit('createServer', { username: username, userId: userId, host: true });
 	};
 
 	const joinServer = async () => {
 		const username = await getValue("username");
 		const userId = await getValue("userId");
 
-		socket.emit('joinServer', { serverCode: serverCode, username: username, userId: userId });
+		socket.emit('joinServer', { serverCode: serverCode, username: username, userId: userId, host: false });
 	};
 
 	const getServerAmount = async () => {
@@ -155,7 +156,7 @@ export default function Page() {
 			{imageUrl && (
 				<Image style={styles.image} source={{ uri: imageUrl }} />
 			)}
-			<TouchableOpacity onPress={() => hostServer()}>
+			<TouchableOpacity onPress={() => router.replace('/host')}>
 				<Text style={styles.button}>Host</Text>
 			</TouchableOpacity>
 		
