@@ -111,11 +111,32 @@ export default function Page() {
 
   const refreshAccessToken = async () => {
 
+    const apiCall = async () => {
+      const accessToken = await getValue("accessToken");
+  
+      await fetch('https://api.spotify.com/v1/me', {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        }
+      })
+        .then((response) => response.json())
+        .then((data) => {
+          console.log("User data: ", data);
+          AsyncStorage.setItem("userImage", data.images[0].url);
+          AsyncStorage.setItem("username", data.display_name);
+          AsyncStorage.setItem("userId", data.id);
+        })
+        .catch((error) => {
+          console.log("Fetch error: ", error);
+        })
+    };
+
     const validateAuth = async () => {
       const accessToken = await getValue("accessToken");
 
       if (accessToken) {
         setLogin(false);
+        apiCall();
         router.replace('/home');
       } else {
         setLogin(true);

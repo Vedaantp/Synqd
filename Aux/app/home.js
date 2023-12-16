@@ -11,29 +11,35 @@ export default function Page() {
 	const [serverCode, setServerCode] = React.useState(null);
 	const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
-	React.useEffect(() => {
-		apiCall();
+	// React.useEffect(() => {
+	// 	// apiCall();
 
-		const newSocket = io(serverUrl);
+	// 	const getImage = async () => {
+	// 		setImageUrl(await getValue("userImage"));
+	// 	};
 
-		newSocket.on('connect', () => {
-			console.log('Connected to server');
-		});
+	// 	getImage();
 
-		newSocket.on('serverCreated', ({ serverCode }) => {
-			console.log('Server created with code: ', serverCode);
-		});
+	// 	const newSocket = io(serverUrl);
 
-		newSocket.on('userJoined', (data) => {
-			console.log('User joined:', data);
-		});
+	// 	newSocket.on('connect', () => {
+	// 		console.log('Connected to server');
+	// 	});
 
-		setSocket(newSocket);
+	// 	newSocket.on('serverCreated', ({ serverCode }) => {
+	// 		console.log('Server created with code: ', serverCode);
+	// 	});
 
-		return () => {
-			newSocket.disconnect();
-		};
-	}, [])
+	// 	newSocket.on('userJoined', (data) => {
+	// 		console.log('User joined:', data);
+	// 	});
+
+	// 	setSocket(newSocket);
+
+	// 	return () => {
+	// 		newSocket.disconnect();
+	// 	};
+	// }, [])
 
 	const getValue = async (key) => {
 		try {
