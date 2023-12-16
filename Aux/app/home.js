@@ -8,7 +8,7 @@ export default function Page() {
 	const [imageUrl, setImageUrl] = React.useState(null);
 	const [socket, setSocket] = React.useState(null);
 	const [serverCode, setServerCode] = React.useState(null);
-	const serverUrl = 'http://11.20.100.3:3000';
+	const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
 	React.useEffect(() => {
 		apiCall();
@@ -68,6 +68,9 @@ export default function Page() {
 		const username = await getValue("username");
 		const userId = await getValue("userId");
 
+		console.log(username);
+		console.log(userId);
+
 		socket.emit('createServer', { username: username, userId: userId });
 	};
 
@@ -78,61 +81,25 @@ export default function Page() {
 		socket.emit('joinServer', { serverCode: serverCode, username: username, userId: userId });
 	};
 
-	// const hostServer = async () => {
-	//   try {
+	const getServerAmount = async () => {
 
-	//     const userId = await getValue("userId");
-	//     const username = await getValue("username");
+		try {
+			const response = await fetch(`${serverUrl}/activeServers`);
 
-	//     const response = await fetch(`${serverUrl}createServer`, {
-	//       method: 'POST',
-	//       headers: {
-	//         'Content-Type': 'application/json',
-	//       },
-	//       body: JSON.stringify({
-	//         username: username,
-	//         userId: userId,
-	//       }),
-	//     });
+			if (response.ok) {
+				const result = await response.json();
 
-	//     const data = await response.json();
-	//     console.log('Server created:', data.serverCode);
-
-	//     getUsers(data.serverCode);
-
-	//   } catch (error) {
-	//     console.error('Error creating server:', error);
-	//   }
-	// };
-
-	// const joinServer = async () => {
-	// 	try {
-
-	// 		const username = await getValue("username");
-	// 		const userId = await getValue("userId");
-	// 		const serverCode = 276766;
-
-	// 		const response = await fetch(`${serverUrl}joinServer`, {
-	// 			method: 'POST',
-	// 			headers: {
-	// 				'Content-Type': 'application/json',
-	// 			},
-	// 			body: JSON.stringify({
-	// 				serverCode: serverCode,
-	// 				username: username,
-	// 				userId: userId,
-	// 			}),
-	// 		});
-
-	// 		const data = await response.json();
-	// 		console.log('Server joined:', data.success);
-
-	// 		getUsers(serverCode);
-
-	// 	} catch (error) {
-	// 		console.error('Error joining server:', error);
-	// 	}
-	// };
+				if (result) {
+					console.log('Num servers:', result.numberOfServers);
+				} else {
+				}
+			} else {
+				console.log('Failed to get users. Server responded with:', response.status);
+			}
+		} catch (error) {
+			console.error('Error getting users:', error.message);
+		}
+	};
 
 	const getUsers = async (serverCode) => {
 
