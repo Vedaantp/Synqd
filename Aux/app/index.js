@@ -1,11 +1,10 @@
 import * as React from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, exchangeCodeAsync, refreshAsync } from 'expo-auth-session';
-import pkceChallenge, { verifyChallenge } from 'react-native-pkce-challenge';
+import pkceChallenge from 'react-native-pkce-challenge';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from 'expo-router';
-import { get } from 'react-native/Libraries/TurboModule/TurboModuleRegistry';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -13,7 +12,7 @@ const authorizationEndpoint = 'https://accounts.spotify.com/authorize';
 const tokenEndpoint = 'https://accounts.spotify.com/api/token';
 
 const clientId = '43d48850732744018aff88a5692d03d5';
-const scopes = ['user-read-email', 'playlist-modify-public'];
+const scopes = ['user-read-email', 'user-read-private'];
 redirectURI = makeRedirectUri({native: 'auxapp://callback'});
 const challenge = pkceChallenge();
 
@@ -36,13 +35,13 @@ export default function Page() {
     const validateAuth = async () => {
       const accessToken = await getValue("accessToken");
       const expiration = await getValue("expiration");
-      let expirationTime  = parseInt(expiration, 10);
+      let expirationTime = parseInt(expiration, 10);
       let currentTime = new Date().getTime();
 
       if (accessToken) {
         if (currentTime < expirationTime) {
           setLogin(false);
-          router.replace('/login');
+          router.replace('/home');
         } else {
           setLogin(false);
           refreshAccessToken();
@@ -117,7 +116,7 @@ export default function Page() {
 
       if (accessToken) {
         setLogin(false);
-        router.replace('/login');
+        router.replace('/home');
       } else {
         setLogin(true);
       }
