@@ -5,11 +5,11 @@ import { router } from 'expo-router';
 
 export default function Page() {
 
-	const [serverCode, setServerCode] = React.useState(null);
+	const [serverCode, setServerCode] = React.useState(null)
 
 	const joinRoute = async () => {
 		if (serverCode === null) {
-		await AsyncStorage.setItem("serverCode", '');
+			await AsyncStorage.setItem("serverCode", '');
 
 		} else {
 			await AsyncStorage.setItem("serverCode", serverCode);
@@ -28,7 +28,7 @@ export default function Page() {
 			<TouchableOpacity onPress={() => router.replace('/host')}>
 				<Text style={styles.button}>Host</Text>
 			</TouchableOpacity>
-		
+
 			<TextInput
 				style={styles.input}
 				placeholder="Enter Server Code"
@@ -68,5 +68,5 @@ const styles = StyleSheet.create({
 		borderWidth: 1,
 		marginBottom: 10,
 		paddingHorizontal: 10,
-	  },
+	},
 });  

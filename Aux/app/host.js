@@ -8,7 +8,10 @@ export default function Page() {
 
     const [socket, setSocket] = React.useState(null);
     const [theServerCode, setTheServerCode] = React.useState(null);
-    const [listUsers, setListUsers] = React.useState({users: [], host: {}});
+    const [listUsers, setListUsers] = React.useState({ users: [], host: {} });
+    const [countdown, setCountdown] = React.useState(null);
+    const [votingPhase, setVotingPhase] = React.useState(false);
+    const [buttonVisible, setButtonVisible] = React.useState(true);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
     React.useEffect(() => {
@@ -54,6 +57,21 @@ export default function Page() {
             console.log("Leave error: ", data);
         });
 
+        newSocket.on('countdownUpdate', ({ timerIndex, remainingTime }) => {
+            if (remainingTime === 0) {
+                setCountdown(null);
+            } else {
+                setCountdown(remainingTime / 1000);
+            }
+
+            if (timerIndex === 0) {
+                setVotingPhase(false);
+            } else {
+                setVotingPhase(true);
+            }
+
+        });
+
         setSocket(newSocket);
 
         return () => {
@@ -82,14 +100,34 @@ export default function Page() {
         const userId = await getValue("userId");
         const serverCode = await getValue("serverCode");
 
+        socket.emit('end', {serverCode: serverCode, userId: userId});
         socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
 
         await AsyncStorage.removeItem("serverCode");
     };
 
+    const startServer = async () => {
+        const userId = await getValue("userId");
+        const serverCode = await getValue("serverCode");
+        
+        setButtonVisible(false);
+
+        socket.emit("start", {serverCode: serverCode, userId: userId});
+    };
+
     return (
         <View style={styles.container}>
             <Text>Server Code: {theServerCode}</Text>
+
+            { countdown && (
+                <Text>
+                    {votingPhase ? "Vote the song you want!" : "Search for your song!"}
+                </Text>
+            )}
+
+            { countdown && (
+                <Text>Countdown: {countdown} seconds</Text>
+            )}
 
             {listUsers.host && (
                 <Text>{listUsers.host.username}</Text>
@@ -98,6 +136,12 @@ export default function Page() {
             {listUsers.users && listUsers.users.map((user, index) => (
                 <Text key={index}>{user.username}</Text>
             ))}
+
+            { buttonVisible && (
+                <TouchableOpacity onPress={() => startServer()}>
+                    <Text style={styles.button}>Start Session</Text>
+                </TouchableOpacity>
+            )}
 
             <TouchableOpacity onPress={() => leaveServer()}>
                 <Text style={styles.button}>End Session</Text>

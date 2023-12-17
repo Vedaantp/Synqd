@@ -9,6 +9,8 @@ export default function Page() {
     const [socket, setSocket] = React.useState(null);
     const [listUsers, setListUsers] = React.useState({users: [], host: {}});
     const [theServerCode, setTheServerCode] = React.useState(null);
+    const [countdown, setCountdown] = React.useState(null);
+    const [votingPhase, setVotingPhase] = React.useState(false);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
     React.useEffect(() => {
@@ -48,6 +50,21 @@ export default function Page() {
         newSocket.on("serverFull", () => {
             console.log("Server is full");
             serverFull();
+        });
+
+        newSocket.on('countdownUpdate', ({ timerIndex, remainingTime }) => {
+            if (remainingTime === 0) {
+                setCountdown(null);
+            } else {
+                setCountdown(remainingTime / 1000);
+            }
+
+            if (timerIndex === 0) {
+                setVotingPhase(false);
+            } else {
+                setVotingPhase(true);
+            }
+
         });
 
         setSocket(newSocket);
@@ -129,6 +146,16 @@ export default function Page() {
     return (
         <View style={styles.container}>
             <Text>Server Code: {theServerCode}</Text>
+
+            { countdown && (
+                <Text>
+                    {votingPhase ? "Vote the song you want!" : "Search for your song!"}
+                </Text>
+            )}
+
+            { countdown && (
+                <Text>Countdown: {countdown} seconds</Text>
+            )}
 
             {listUsers.host && (
                 <Text>{listUsers.host.username}</Text>
