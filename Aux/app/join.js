@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Alert } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import io from 'socket.io-client';
 import { router } from 'expo-router';
@@ -7,32 +7,18 @@ import { router } from 'expo-router';
 export default function Page() {
 
     const [socket, setSocket] = React.useState(null);
-    const [theServerCode, setTheServerCode] = React.useState(null);
     const [listUsers, setListUsers] = React.useState({users: [], host: {}});
+    const [theServerCode, setTheServerCode] = React.useState(null);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
     React.useEffect(() => {
-
-        const setServerCode = async (serverCode) => {
-            await AsyncStorage.setItem("serverCode", serverCode);
-            const value = await getValue("serverCode");
-
-            if (value !== null) {
-                setTheServerCode(value);
-            }
-        };
 
         const newSocket = io(serverUrl);
 
         newSocket.on('connect', () => {
             console.log('Connected to server');
-            hostServer(newSocket);
+            joinServer(newSocket);
 
-        });
-
-        newSocket.on('serverCreated', ({ serverCode }) => {
-            console.log('Server created with code: ', serverCode);
-            setServerCode(serverCode);
         });
 
         newSocket.on('userJoined', (data) => {
@@ -42,7 +28,7 @@ export default function Page() {
 
         newSocket.on('hostLeft', (data) => {
             console.log("Host left: ", data);
-            router.replace('/home');
+            hostLeft();            
         });
 
         newSocket.on('userLeft', (data) => {
@@ -52,6 +38,16 @@ export default function Page() {
 
         newSocket.on("leaveError", (data) => {
             console.log("Leave error: ", data);
+        });
+
+        newSocket.on("joinError", (data) => {
+            console.log("Join error: ", data);
+            joinError();
+        });
+
+        newSocket.on("serverFull", () => {
+            console.log("Server is full");
+            serverFull();
         });
 
         setSocket(newSocket);
@@ -71,12 +67,17 @@ export default function Page() {
         }
     };
 
-    const hostServer = async (socket) => {
-        const username = await getValue("username");
-        const userId = await getValue("userId");
+    const joinServer = async (socket) => {
+		const username = await getValue("username");
+		const userId = await getValue("userId");
+        const serverCode = await getValue("serverCode");
+        
+        if (serverCode !== null) {
+            setTheServerCode(serverCode);
+        }
 
-        socket.emit('createServer', { username: username, userId: userId });
-    };
+		socket.emit('joinServer', { serverCode: serverCode, username: username, userId: userId });
+	};
 
     const leaveServer = async () => {
         const userId = await getValue("userId");
@@ -85,7 +86,45 @@ export default function Page() {
         socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
 
         await AsyncStorage.removeItem("serverCode");
+
+        router.replace('/home');
     };
+
+    const hostLeft = async () => {
+        await AsyncStorage.removeItem("serverCode");
+        router.replace('/home');
+    };
+
+    const serverFull = async () => {
+        await AsyncStorage.removeItem("serverCode");
+
+        Alert.alert(
+            'Server Full',
+            'The server you are trying to join is currently full right now. Please try again later. Thank you.',
+            [
+              { text: 'OK' }
+            ],
+            { cancelable: false }
+          );
+        console.assert("Server is full");
+        router.replace('/home');
+    };
+
+    const joinError = async () => {
+        await AsyncStorage.removeItem("serverCode");
+
+        Alert.alert(
+            'Join Error',
+            'The server you are trying to join is does not exist. Please enter the correct server code provided by the host.',
+            [
+              { text: 'OK' }
+            ],
+            { cancelable: false }
+          );
+        console.assert("Server is full");
+        router.replace('/home');
+    };
+
 
     return (
         <View style={styles.container}>
@@ -100,7 +139,7 @@ export default function Page() {
             ))}
 
             <TouchableOpacity onPress={() => leaveServer()}>
-                <Text style={styles.button}>End Session</Text>
+                <Text style={styles.button}>Leave</Text>
             </TouchableOpacity>
         </View>
     );

@@ -28,7 +28,7 @@ const getValue = async (key) => {
 
 export default function Page() {
 
-  const [login, setLogin] = React.useState(false);
+  const [login, setLogin] = React.useState(true);
 
   React.useEffect(() => {
 
@@ -71,11 +71,12 @@ export default function Page() {
   );
 
   React.useEffect(() => {
+
     if (login) {
       if (response?.type === 'success') {
 
+        console.log("getting exchange");
         exchangeCode(response.params.code, request.codeVerifier);
-        
       }
     }
   }, [response]);
@@ -103,6 +104,8 @@ export default function Page() {
       await AsyncStorage.setItem('refreshToken', tokenResponse.refreshToken);
       await AsyncStorage.setItem('expiration', expirationTime.toString());
 
+      validateAuth();
+
     } catch (error) {
       setLogin(true);
       console.error("Token exchange error: ", error);
@@ -110,38 +113,6 @@ export default function Page() {
   };
 
   const refreshAccessToken = async () => {
-
-    const apiCall = async () => {
-      const accessToken = await getValue("accessToken");
-  
-      await fetch('https://api.spotify.com/v1/me', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        }
-      })
-        .then((response) => response.json())
-        .then((data) => {
-          console.log("User data: ", data);
-          AsyncStorage.setItem("userImage", data.images[0].url);
-          AsyncStorage.setItem("username", data.display_name);
-          AsyncStorage.setItem("userId", data.id);
-        })
-        .catch((error) => {
-          console.log("Fetch error: ", error);
-        })
-    };
-
-    const validateAuth = async () => {
-      const accessToken = await getValue("accessToken");
-
-      if (accessToken) {
-        setLogin(false);
-        apiCall();
-        router.replace('/home');
-      } else {
-        setLogin(true);
-      }
-    };
 
     try {
 
@@ -177,6 +148,36 @@ export default function Page() {
 
   };
 
+  const apiCall = async () => {
+    const accessToken = await getValue("accessToken");
+
+    await fetch('https://api.spotify.com/v1/me', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      }
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        console.log("User data: ", data);
+        AsyncStorage.setItem("username", data.display_name);
+        AsyncStorage.setItem("userId", data.id);
+      })
+      .catch((error) => {
+        console.log("Fetch error: ", error);
+      })
+  };
+
+  const validateAuth = async () => {
+    const accessToken = await getValue("accessToken");
+
+    if (accessToken) {
+      setLogin(false);
+      apiCall();
+      router.replace('/home');
+    } else {
+      setLogin(true);
+    }
+  };
 
   return (
     <View style={styles.container}>
