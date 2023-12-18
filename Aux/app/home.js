@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 
 export default function Page() {
 
-	const [serverCode, setServerCode] = React.useState(null)
+	const [serverCode, setServerCode] = React.useState(null);
 
 	const joinRoute = async () => {
 		if (serverCode === null) {
@@ -16,7 +16,7 @@ export default function Page() {
 		}
 
 		router.replace('/join');
-	}
+	};
 
 	const logout = async () => {
 		await AsyncStorage.setItem("accessToken", '');
@@ -48,9 +48,9 @@ export default function Page() {
 
 const styles = StyleSheet.create({
 	container: {
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: "center",
+		// flex: 1,
+		// justifyContent: 'center',
+		// alignItems: "center",
 	},
 	button: {
 		fontWeight: "bold",

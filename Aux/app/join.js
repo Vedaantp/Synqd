@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert } from "react-native";
+import { StyleSheet, Text, View, TouchableOpacity, Alert, TextInput, ScrollView } from "react-native";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import io from 'socket.io-client';
 import { router } from 'expo-router';
@@ -11,6 +11,9 @@ export default function Page() {
     const [theServerCode, setTheServerCode] = React.useState(null);
     const [countdown, setCountdown] = React.useState(null);
     const [votingPhase, setVotingPhase] = React.useState(false);
+    const [searchParam, setSearchParam] = React.useState(null);
+    const [songList, setSongList] = React.useState(null);
+    const [songSelected, setSongSelected] = React.useState(null);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
     React.useEffect(() => {
@@ -63,6 +66,8 @@ export default function Page() {
                 setVotingPhase(false);
             } else {
                 setVotingPhase(true);
+                setSongList(null);
+                setSearchParam(null);
             }
 
         });
@@ -143,27 +148,99 @@ export default function Page() {
     };
 
 
+    // Add a verifier to make sure the access token is not expired. 
+    // If it is then set any data associated with the user to null.
+    // Then disconnect them from the server and then send them back to the login screen.
+    // Send alert to let user know why this is happening.
+    const searchSong = async () => {
+
+        if (searchParam) {
+
+            const accessToken = await getValue("accessToken");
+            const urlFriendlySearchParam = encodeURIComponent(searchParam);
+            const url = `https://api.spotify.com/v1/search?q=${searchParam}&type=track&market=US`;
+            console.log(url);
+
+            const spotifySearchParams = {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                }
+            };
+
+            await fetch(url, spotifySearchParams)
+            .then((response) => response.json())
+            .then((data) => {
+                const songs = data.tracks.items.map(item => ({
+                    name: item.name,
+                    uri: item.uri,
+                    isPlayable: item.is_playable
+                }))
+
+                setSongList(songs);
+
+            })
+            .catch((error) => {
+                console.log("Search error: ", error);
+            })
+        } else {
+
+            setSearchParam(null);
+
+            Alert.alert(
+                'Search Error',
+                'Please enter something in the search field before pressing search.',
+                [
+                  { text: 'OK' }
+                ],
+                { cancelable: false }
+              );
+        }
+    };
+
     return (
+        
         <View style={styles.container}>
             <Text>Server Code: {theServerCode}</Text>
 
             { countdown && (
-                <Text>
-                    {votingPhase ? "Vote the song you want!" : "Search for your song!"}
-                </Text>
+                <>
+                    <Text>Countdown: {countdown} seconds</Text>
+                    <Text>
+                        {votingPhase ? "Vote the song you want!" : "Search for your song!"}
+                    </Text>
+                </>
             )}
 
-            { countdown && (
-                <Text>Countdown: {countdown} seconds</Text>
+            { countdown && !votingPhase && (
+                <>
+                    <TextInput
+                        style={styles.input}
+                        placeholder="Search for a song"
+                        value={searchParam}
+                        onChangeText={setSearchParam}
+                    />
+
+                    <TouchableOpacity onPress={() => searchSong()}>
+                        <Text style={styles.button}>Search Song</Text>
+                    </TouchableOpacity>
+
+                    <ScrollView style={{flex: 0}}>
+                        { songList && songList.map(item => (
+                            <TouchableOpacity key={item.uri} onPress={() => setSongSelected(item.uri)}>
+                                <Text style={[{color: songSelected === item.uri ? 'green' : 'black'}]}>{item.name} - {item.uri}</Text>
+                            </TouchableOpacity>
+                        ))}
+                    </ScrollView>
+                </>
             )}
 
-            {listUsers.host && (
+            {/* {listUsers.host && (
                 <Text>{listUsers.host.username}</Text>
             )}
 
             {listUsers.users && listUsers.users.map((user, index) => (
                 <Text key={index}>{user.username}</Text>
-            ))}
+            ))} */}
 
             <TouchableOpacity onPress={() => leaveServer()}>
                 <Text style={styles.button}>Leave</Text>
@@ -174,9 +251,9 @@ export default function Page() {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: "center",
+        // flex: 1,
+        // justifyContent: 'center',
+        // alignItems: "center",
     },
     button: {
         fontWeight: "bold",

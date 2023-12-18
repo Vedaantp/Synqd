@@ -11,7 +11,6 @@ export default function Page() {
     const [listUsers, setListUsers] = React.useState({ users: [], host: {} });
     const [countdown, setCountdown] = React.useState(null);
     const [votingPhase, setVotingPhase] = React.useState(false);
-    const [buttonVisible, setButtonVisible] = React.useState(true);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
     React.useEffect(() => {
@@ -36,6 +35,8 @@ export default function Page() {
         newSocket.on('serverCreated', ({ serverCode }) => {
             console.log('Server created with code: ', serverCode);
             setServerCode(serverCode);
+
+            startServer(newSocket, serverCode);
         });
 
         newSocket.on('userJoined', (data) => {
@@ -106,11 +107,8 @@ export default function Page() {
         await AsyncStorage.removeItem("serverCode");
     };
 
-    const startServer = async () => {
+    const startServer = async (socket, serverCode) => {
         const userId = await getValue("userId");
-        const serverCode = await getValue("serverCode");
-        
-        setButtonVisible(false);
 
         socket.emit("start", {serverCode: serverCode, userId: userId});
     };
@@ -137,12 +135,6 @@ export default function Page() {
                 <Text key={index}>{user.username}</Text>
             ))}
 
-            { buttonVisible && (
-                <TouchableOpacity onPress={() => startServer()}>
-                    <Text style={styles.button}>Start Session</Text>
-                </TouchableOpacity>
-            )}
-
             <TouchableOpacity onPress={() => leaveServer()}>
                 <Text style={styles.button}>End Session</Text>
             </TouchableOpacity>
@@ -152,9 +144,9 @@ export default function Page() {
 
 const styles = StyleSheet.create({
     container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: "center",
+        // flex: 1,
+        // justifyContent: 'center',
+        // alignItems: "center",
     },
     button: {
         fontWeight: "bold",
