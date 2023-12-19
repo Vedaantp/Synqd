@@ -7,13 +7,13 @@ import { router } from 'expo-router';
 export default function Page() {
 
     const [socket, setSocket] = React.useState(null);
-    const [listUsers, setListUsers] = React.useState({users: [], host: {}});
+    const [listUsers, setListUsers] = React.useState({ users: [], host: {} });
     const [theServerCode, setTheServerCode] = React.useState(null);
     const [countdown, setCountdown] = React.useState(null);
     const [votingPhase, setVotingPhase] = React.useState(false);
     const [searchParam, setSearchParam] = React.useState(null);
     const [songList, setSongList] = React.useState(null);
-    const [songSelected, setSongSelected] = React.useState(null);
+    const [songSelected, setSongSelected] = React.useState({ song: '', uri: '', artists: '' });
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
     React.useEffect(() => {
@@ -31,9 +31,14 @@ export default function Page() {
             setListUsers(data);
         });
 
+        newSocket.on('updateUsers', (data) => {
+            console.log('User joined: ', data);
+            setListUsers(data);
+        });
+
         newSocket.on('hostLeft', (data) => {
             console.log("Host left: ", data);
-            hostLeft();            
+            hostLeft();
         });
 
         newSocket.on('userLeft', (data) => {
@@ -68,6 +73,8 @@ export default function Page() {
                 setVotingPhase(true);
                 setSongList(null);
                 setSearchParam(null);
+
+                sendSongRequest();
             }
 
         });
@@ -90,16 +97,26 @@ export default function Page() {
     };
 
     const joinServer = async (socket) => {
-		const username = await getValue("username");
-		const userId = await getValue("userId");
+        const username = await getValue("username");
+        const userId = await getValue("userId");
         const serverCode = await getValue("serverCode");
-        
-        if (serverCode !== null) {
-            setTheServerCode(serverCode);
-        }
+        const rejoin = await getValue("rejoining");
+        await AsyncStorage.setItem("hosting", "false");
 
-		socket.emit('joinServer', { serverCode: serverCode, username: username, userId: userId });
-	};
+        if (rejoin === 'true') {
+            console.log("User Reconnected");
+            setTheServerCode(serverCode);
+            // implement feature in the server to update the username of member if it changed
+            // use that feature to make a updateUser call on client side
+            socket.emit('updateUser', { username: username, userId: userId, serverCode: serverCode });
+        } else {
+            if (serverCode !== null) {
+                setTheServerCode(serverCode);
+            }
+    
+            socket.emit('joinServer', { serverCode: serverCode, username: username, userId: userId });
+        }
+    };
 
     const leaveServer = async () => {
         const userId = await getValue("userId");
@@ -108,6 +125,8 @@ export default function Page() {
         socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
 
         await AsyncStorage.removeItem("serverCode");
+        await AsyncStorage.setItem("hosting", "false");
+        await AsyncStorage.setItem("rejoining", "false");
 
         router.replace('/home');
     };
@@ -124,10 +143,10 @@ export default function Page() {
             'Server Full',
             'The server you are trying to join is currently full right now. Please try again later. Thank you.',
             [
-              { text: 'OK' }
+                { text: 'OK' }
             ],
             { cancelable: false }
-          );
+        );
         console.assert("Server is full");
         router.replace('/home');
     };
@@ -139,27 +158,108 @@ export default function Page() {
             'Join Error',
             'The server you are trying to join is does not exist. Please enter the correct server code provided by the host.',
             [
-              { text: 'OK' }
+                { text: 'OK' }
             ],
             { cancelable: false }
-          );
+        );
         console.assert("Server is full");
         router.replace('/home');
     };
 
+    const validateAuth = async () => {
+        const accessToken = await getValue("accessToken");
+        const expiration = await getValue("expiration");
+        let expirationTime = parseInt(expiration, 10);
+        let currentTime = new Date().getTime();
 
-    // Add a verifier to make sure the access token is not expired. 
-    // If it is then set any data associated with the user to null.
-    // Then disconnect them from the server and then send them back to the login screen.
-    // Send alert to let user know why this is happening.
+        if (accessToken) {
+            if (currentTime >= expirationTime) {
+                // do refresh path
+                refreshAccessToken();
+            }
+        } else {
+            // do login path
+            const userId = await getValue("userId");
+            const serverCode = await getValue("serverCode");
+
+            socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
+
+            await AsyncStorage.removeItem("serverCode");
+            await AsyncStorage.removeItem("accessToken");
+
+            Alert.alert(
+                'Authentication Error',
+                'We were not able to authenticate your Spotify account. Please login again. Thank you.',
+                [
+                    { text: 'OK' }
+                ],
+                { cancelable: false }
+            );
+
+            router.replace('/');
+        }
+    };
+
+    const refreshAccessToken = async () => {
+
+        try {
+
+            const refreshToken = await getValue("refreshToken");
+
+            const refreshResponse = await refreshAsync(
+                {
+                    extraParams: {
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        grant_type: "refresh_token",
+                    },
+                    clientId: clientId,
+                    refreshToken: refreshToken,
+                },
+                {
+                    tokenEndpoint: tokenEndpoint,
+                }
+            );
+
+            const expirationTime = new Date().getTime() + refreshResponse.expiresIn * 1000;
+            await AsyncStorage.setItem('accessToken', refreshResponse.accessToken);
+            await AsyncStorage.setItem('refreshToken', refreshResponse.refreshToken);
+            await AsyncStorage.setItem('expiration', expirationTime.toString());
+
+        } catch (error) {
+            // do login path
+            const userId = await getValue("userId");
+            const serverCode = await getValue("serverCode");
+
+            socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
+
+            await AsyncStorage.removeItem("serverCode");
+            await AsyncStorage.removeItem("accessToken");
+
+            Alert.alert(
+                'Authentication Error',
+                'We were not able to authenticate your Spotify account. Please login again. Thank you.',
+                [
+                    { text: 'OK' }
+                ],
+                { cancelable: false }
+            );
+
+            router.replace('/');
+        }
+
+    };
+
     const searchSong = async () => {
 
         if (searchParam) {
 
             const accessToken = await getValue("accessToken");
-            const urlFriendlySearchParam = encodeURIComponent(searchParam);
             const url = `https://api.spotify.com/v1/search?q=${searchParam}&type=track&market=US`;
-            console.log(url);
+
+            // verify accessToken and if not valid refresh it
+            validateAuth();
 
             const spotifySearchParams = {
                 headers: {
@@ -168,41 +268,38 @@ export default function Page() {
             };
 
             await fetch(url, spotifySearchParams)
-            .then((response) => response.json())
-            .then((data) => {
-                const songs = data.tracks.items.map(item => ({
-                    name: item.name,
-                    uri: item.uri,
-                    isPlayable: item.is_playable
-                }))
+                .then((response) => response.json())
+                .then((data) => {
+                    const songs = data.tracks.items.map(item => ({
+                        name: item.name,
+                        uri: item.uri,
+                        isPlayable: item.is_playable,
+                        artist: item.artists.map(artistItems => artistItems.name)
+                    }))
 
-                setSongList(songs);
+                    setSongList(songs);
 
-            })
-            .catch((error) => {
-                console.log("Search error: ", error);
-            })
+                })
+                .catch((error) => {
+                    console.log("Search error: ", error);
+                })
         } else {
 
             setSearchParam(null);
-
-            Alert.alert(
-                'Search Error',
-                'Please enter something in the search field before pressing search.',
-                [
-                  { text: 'OK' }
-                ],
-                { cancelable: false }
-              );
+            setSongList(null);
         }
     };
 
+    const sendSongRequest = async () => {
+
+    };
+
     return (
-        
+
         <View style={styles.container}>
             <Text>Server Code: {theServerCode}</Text>
 
-            { countdown && (
+            {countdown && (
                 <>
                     <Text>Countdown: {countdown} seconds</Text>
                     <Text>
@@ -211,23 +308,29 @@ export default function Page() {
                 </>
             )}
 
-            { countdown && !votingPhase && (
+            {countdown && !votingPhase && (
                 <>
+                    {songSelected.uri !== '' && (
+                        <Text>Song Selected: <Text style={{ color: "green" }}>{songSelected.song} - {songSelected.artists}</Text></Text>
+                    )}
+
                     <TextInput
                         style={styles.input}
                         placeholder="Search for a song"
                         value={searchParam}
                         onChangeText={setSearchParam}
+                        returnKeyType='go'
+                        onSubmitEditing={() => searchSong()}
                     />
 
                     <TouchableOpacity onPress={() => searchSong()}>
                         <Text style={styles.button}>Search Song</Text>
                     </TouchableOpacity>
 
-                    <ScrollView style={{flex: 0}}>
-                        { songList && songList.map(item => (
-                            <TouchableOpacity key={item.uri} onPress={() => setSongSelected(item.uri)}>
-                                <Text style={[{color: songSelected === item.uri ? 'green' : 'black'}]}>{item.name} - {item.uri}</Text>
+                    <ScrollView style={{ flex: 0 }}>
+                        {songList && songList.map(item => (
+                            <TouchableOpacity key={item.uri} onPress={() => setSongSelected({ song: item.name, uri: item.uri, artists: item.artist.join(', ') })}>
+                                <Text style={[{ color: songSelected.uri === item.uri ? 'green' : 'black' }]}>{item.name} - {item.artist.join(', ')}</Text>
                             </TouchableOpacity>
                         ))}
                     </ScrollView>

@@ -44,6 +44,11 @@ export default function Page() {
             setListUsers(data);
         });
 
+        newSocket.on('updateUsers', (data) => {
+            console.log('User joined: ', data);
+            setListUsers(data);
+        });
+
         newSocket.on('hostLeft', (data) => {
             console.log("Host left: ", data);
             router.replace('/home');
@@ -93,8 +98,20 @@ export default function Page() {
     const hostServer = async (socket) => {
         const username = await getValue("username");
         const userId = await getValue("userId");
+        const rejoin = await getValue("rejoining");
+        const serverCode = await getValue("serverCode");
+        await AsyncStorage.setItem("hosting", "true");
 
-        socket.emit('createServer', { username: username, userId: userId });
+        if (rejoin === 'true') {
+            console.log("User Reconnected");
+            setTheServerCode(serverCode);
+            // implement feature in server to update the host username if it changed
+            // use that feature to emit the updateHost call on client side
+            socket.emit("updateHost", { username: username, userId: userId, serverCode: serverCode });
+        } else {
+            socket.emit('createServer', { username: username, userId: userId });
+        }
+
     };
 
     const leaveServer = async () => {
@@ -105,6 +122,8 @@ export default function Page() {
         socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
 
         await AsyncStorage.removeItem("serverCode");
+        await AsyncStorage.setItem("hosting", "false");
+        await AsyncStorage.setItem("rejoining", "false");
     };
 
     const startServer = async (socket, serverCode) => {
