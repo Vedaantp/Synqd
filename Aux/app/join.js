@@ -15,7 +15,10 @@ export default function Page() {
     const [songList, setSongList] = React.useState(null);
     const [songSelected, setSongSelected] = React.useState({ song: '', uri: '', artists: '' });
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
+    let heartbeatInterval = null;
 
+    // once user is directed to this page the app will connect them to the server
+    // and then attempt to join the serverCode
     React.useEffect(() => {
 
         const newSocket = io(serverUrl);
@@ -26,13 +29,13 @@ export default function Page() {
 
         });
 
-        newSocket.on('userJoined', (data) => {
-            console.log('User joined: ', data);
-            setListUsers(data);
+        newSocket.on('userJoined', ({ userId }) => {
+            console.log('User joined: ', userId);
+            checkUserJoined(userId, newSocket);
         });
 
         newSocket.on('updateUsers', (data) => {
-            console.log('User joined: ', data);
+            console.log('Users updated: ', data);
             setListUsers(data);
         });
 
@@ -41,9 +44,9 @@ export default function Page() {
             hostLeft();
         });
 
-        newSocket.on('userLeft', (data) => {
-            console.log("User left: ", data);
-            setListUsers(data);
+        newSocket.on('hostTimedOut', (data) => {
+            console.log("Host timed out: ", data);
+            hostLeft();
         });
 
         newSocket.on("leaveError", (data) => {
@@ -53,6 +56,11 @@ export default function Page() {
         newSocket.on("joinError", (data) => {
             console.log("Join error: ", data);
             joinError();
+        });
+
+        newSocket.on("rejoinError", (data) => {
+            console.log("Join error: ", data);
+            rejoin(newSocket);
         });
 
         newSocket.on("serverFull", () => {
@@ -79,13 +87,23 @@ export default function Page() {
 
         });
 
+        newSocket.on("userTimedOut", ({ userId }) => {
+            checkTimeOut(userId);
+        });
+
+        newSocket.on("heartbeatReceived", (data) => {
+            console.log("Heartbeat received: ", data);
+        });
+
         setSocket(newSocket);
 
         return () => {
+            clearInterval(heartbeatInterval);
             newSocket.disconnect();
         };
     }, [])
 
+    // function to get the values from async storage
     const getValue = async (key) => {
         try {
             const value = await AsyncStorage.getItem(key);
@@ -96,6 +114,8 @@ export default function Page() {
         }
     };
 
+    // if the user is not rejoining a server it will attempt to join a server using the code they entered
+    // if the user is rejoining a server it will attempt to rejoin the server they were in before
     const joinServer = async (socket) => {
         const username = await getValue("username");
         const userId = await getValue("userId");
@@ -103,11 +123,10 @@ export default function Page() {
         const rejoin = await getValue("rejoining");
         await AsyncStorage.setItem("hosting", "false");
 
-        if (rejoin === 'true') {
-            console.log("User Reconnected");
+        if (rejoin === "true") {
+            console.log("User Reconnected to ", serverCode);
             setTheServerCode(serverCode);
-            // implement feature in the server to update the username of member if it changed
-            // use that feature to make a updateUser call on client side
+
             socket.emit('updateUser', { username: username, userId: userId, serverCode: serverCode });
         } else {
             if (serverCode !== null) {
@@ -118,6 +137,34 @@ export default function Page() {
         }
     };
 
+    // if the user was disconnected from the server but still tried to rejoin
+    // it will attempt to join the server normally but it may fail if the server became full or closed
+    const rejoin = async (socket) => {
+        const username = await getValue("username");
+        const userId = await getValue("userId");
+        const serverCode = await getValue("serverCode");
+        await AsyncStorage.setItem("hosting", "false");
+
+        if (serverCode !== null) {
+            setTheServerCode(serverCode);
+        }
+
+        socket.emit('joinServer', { serverCode: serverCode, username: username, userId: userId });
+    };
+
+    // once a user joins a server this function is called to check the user id of the member that joined
+    // if the user id matches the current user's id then it will start the heartbeat 
+    const checkUserJoined = async (userId, newSocket) => {
+        const myUserId = await getValue("userId");
+        const serverCode = await getValue("serverCode");
+
+        if (userId === myUserId) {
+            heartbeatInterval = setInterval(() => {sendHeartbeat(newSocket, serverCode)}, 5000);
+        }
+    };
+
+    // function that allows user to leave the server by disconnecting them and removing any data related to the server
+    // does not prompt for rejoin if this path is taken
     const leaveServer = async () => {
         const userId = await getValue("userId");
         const serverCode = await getValue("serverCode");
@@ -131,13 +178,22 @@ export default function Page() {
         router.replace('/home');
     };
 
+    // function is called if a host left the server
+    // removes any data associated with server
+    // does not prompt for rejoin if this path is taken
     const hostLeft = async () => {
         await AsyncStorage.removeItem("serverCode");
+        await AsyncStorage.setItem("hosting", "false");
+        await AsyncStorage.setItem("rejoining", "false");
         router.replace('/home');
     };
 
+    // function is called if the server was full at join
+    // removes any data associated with the server and does not prompt for rejoin
     const serverFull = async () => {
         await AsyncStorage.removeItem("serverCode");
+        await AsyncStorage.setItem("hosting", "false");
+        await AsyncStorage.setItem("rejoining", "false");
 
         Alert.alert(
             'Server Full',
@@ -147,25 +203,31 @@ export default function Page() {
             ],
             { cancelable: false }
         );
-        console.assert("Server is full");
+
         router.replace('/home');
     };
 
+    // function is called if there was an error while joining
+    // removes any data associated with server
+    // does not prompt for rejoin
     const joinError = async () => {
         await AsyncStorage.removeItem("serverCode");
+        await AsyncStorage.setItem("hosting", "false");
+        await AsyncStorage.setItem("rejoining", "false");
 
         Alert.alert(
             'Join Error',
-            'The server you are trying to join is does not exist. Please enter the correct server code provided by the host.',
+            'The server you are trying to join is does not exist.',
             [
                 { text: 'OK' }
             ],
             { cancelable: false }
         );
-        console.assert("Server is full");
+
         router.replace('/home');
     };
 
+    // validates the access token of the user
     const validateAuth = async () => {
         const accessToken = await getValue("accessToken");
         const expiration = await getValue("expiration");
@@ -186,6 +248,8 @@ export default function Page() {
 
             await AsyncStorage.removeItem("serverCode");
             await AsyncStorage.removeItem("accessToken");
+            await AsyncStorage.setItem("hosting", "false");
+            await AsyncStorage.setItem("rejoining", "false");
 
             Alert.alert(
                 'Authentication Error',
@@ -200,6 +264,7 @@ export default function Page() {
         }
     };
 
+    // function that will try to refresh the access token with spotify
     const refreshAccessToken = async () => {
 
         try {
@@ -236,6 +301,8 @@ export default function Page() {
 
             await AsyncStorage.removeItem("serverCode");
             await AsyncStorage.removeItem("accessToken");
+            await AsyncStorage.setItem("hosting", "false");
+            await AsyncStorage.setItem("rejoining", "false");
 
             Alert.alert(
                 'Authentication Error',
@@ -251,6 +318,25 @@ export default function Page() {
 
     };
 
+    // function that checks the userId of a timedout user
+    // if the userId is the current user's id then it will remove any data associated with server
+    // user will be disconnected from the server
+    // will allow user to rejoin
+    const checkTimeOut = async (userId) => {
+        const myUserId = await getValue("userId");
+
+        if (myUserId === userId) {
+            // disconnect
+
+            await AsyncStorage.removeItem("serverCode");
+            await AsyncStorage.setItem("hosting", "false");
+            await AsyncStorage.setItem("rejoining", "true");
+
+            router.replace('/home');
+        }
+    };
+
+    // function that allows user to search for songs within spotify using spotify api
     const searchSong = async () => {
 
         if (searchParam) {
@@ -290,10 +376,23 @@ export default function Page() {
         }
     };
 
+    // function that sends a heartbeat to the server to make sure user does not timeout
+    const sendHeartbeat = async (socket, serverCode) => {
+        const userId = await getValue("userId");
+        console.log("Sending heartbeat");
+        socket.emit("heartbeat", { serverCode: serverCode, userId: userId });
+    };
+
+    // function that allows user to submit a song request
+    // the song request will be taken to a voting phase for users to vote on one song
+    // song winner will be added to the host's queue
     const sendSongRequest = async () => {
 
     };
 
+    // displays the server code, a countdown for the current phase, the current phase,
+    //  a song search textbox, a search button for songs, a list of songs from the search,
+    //  and a leave server button
     return (
 
         <View style={styles.container}>

@@ -4,20 +4,35 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import io from 'socket.io-client';
 
-// check if user is a premium member 
-// if not they cannot host so dim out the host button and display a message when they click on it
-
 export default function Page() {
 
 	const [serverCode, setServerCode] = React.useState(null);
+	const [accountStatus, setAccountStatus] = React.useState(false);
 	const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
+	// runs functions once app is loaded onto this page
 	React.useEffect(() => {
 
+		// checks the users account status (premium or free spotify account)
+		checkAccountStatus();
+		// checks if the user is able to rejoin a server
 		checkRejoin();
 
 	}, []);
 
+	// function to check the users spotify account type and sets the value in use State
+	const checkAccountStatus = async () => {
+		const product = await getValue('accountStatus');
+
+		if (product === 'premium') {
+			setAccountStatus(true);
+		} else {
+			setAccountStatus(false);
+		}
+
+	};
+
+	// function to retreive values from async storage
 	const getValue = async (key) => {
 		try {
 			const value = await AsyncStorage.getItem(key);
@@ -28,10 +43,14 @@ export default function Page() {
 		}
 	};
 
-	const checkRejoin = async (socket) => {
+	// function to check if user can rejoin a server
+	const checkRejoin = async () => {
 
 		const oldServerCode = await getValue("serverCode");
 
+		// if the server code is set it will prompt the user to rejoin a session or not
+		// on Yes the user will try to reconnect to the server
+		// on No the user will be disconnected from the server
 		if (oldServerCode) {
 			Alert.alert(
 				"Session Found",
@@ -41,13 +60,13 @@ export default function Page() {
 						text: "No",
 						style: "cancel",
 						onPress: () => {
-							stopRejoin(socket, oldServerCode);
+							stopRejoin();
 						},
 					},
 					{
 						text: "Yes",
 						onPress: () => {
-							rejoin(oldServerCode);
+							rejoin();
 						},
 					},
 				],
@@ -56,7 +75,10 @@ export default function Page() {
 		}
 	};
 
-	const rejoin = async (oldServerCode) => {
+	// if user chose yes
+	// user will be redirected to the correct page on the app and will try to reconnect to the server
+	const rejoin = async () => {
+		const oldServerCode = await getValue("serverCode");
 		const hosting = await getValue("hosting");
 
 		if (oldServerCode) {
@@ -73,52 +95,77 @@ export default function Page() {
 		}
 	};
 
-	const stopRejoin = async (socket, oldServerCode) => {
+	// if user chose No
+	// the app will disconnect the user from the previous server
+	const stopRejoin = async () => {
 		const userId = await getValue("userId");
 		const username = await getValue("username");
 		const hosting = await getValue("hosting");
+		const oldServerCode = await getValue("serverCode");
 
 		await AsyncStorage.removeItem("serverCode");
 		await AsyncStorage.setItem("hosting", 'false');
 		await AsyncStorage.setItem("rejoining", "false");
 
-		return new Promise ((resolve) => {
-			const socket = io(serverUrl);
+		if (oldServerCode) {
+			return new Promise ((resolve) => {
+				const socket = io(serverUrl);
 
-			socket.on('connect', () => {
-				console.log('Connected to server');
+				socket.on('connect', () => {
+					console.log('Connected to server');
 
-				if (hosting === 'true') {
-					socket.emit("updateHost", { username: username, userId: userId, serverCode: oldServerCode });
-				} else {
-					socket.emit('updateUser', { username: username, userId: userId, serverCode: oldServerCode });
-				}
+					if (hosting === 'true') {
+						socket.emit("updateHost", { username: username, userId: userId, serverCode: oldServerCode });
+					} else {
+						socket.emit('updateUser', { username: username, userId: userId, serverCode: oldServerCode });
+					}
+				});
+
+				socket.on('updateUsers', (data) => {
+					if (hosting === 'true') {
+						socket.emit('end', {serverCode: oldServerCode, userId: userId});
+						socket.emit('leaveServer', { serverCode: oldServerCode, userId: userId });
+					} else {
+						socket.emit('leaveServer', { serverCode: oldServerCode, userId: userId });
+					}
+				});
+
+				socket.on('hostLeft', (data) => {
+					console.log('Rejoin canceled');
+					socket.disconnect();
+					resolve();
+				});
+
+				socket.on('userStoppedRejoin', (data) => {
+					console.log("Rejoin canceled");
+					socket.disconnect();
+					resolve();
+				});
+
+				socket.on('joinError', (data) => {
+					console.log("Rejoin canceled");
+					socket.disconnect();
+					resolve();
+				});
+
+				socket.on('rejoinError', (data) => {
+					console.log("Rejoin canceled");
+					socket.disconnect();
+					resolve();
+				});
+
+				socket.on('serverFull', (data) => {
+					console.log("Rejoin canceled");
+					socket.disconnect();
+					resolve();
+				});
+
 			});
-
-			socket.on('updateUsers', (data) => {
-				if (hosting === 'true') {
-					socket.emit('end', {serverCode: oldServerCode, userId: userId});
-					socket.emit('leaveServer', { serverCode: oldServerCode, userId: userId });
-				} else {
-					socket.emit('leaveServer', { serverCode: oldServerCode, userId: userId });
-				}
-			});
-
-			socket.on('hostLeft', (data) => {
-				console.log('Host disconnected');
-				socket.disconnect();
-				resolve();
-			});
-
-			socket.on('userLeft', (data) => {
-				console.log("User disconnected");
-				socket.disconnect();
-				resolve();
-			});
-
-		});
+		}
 	};
 
+	// function that handles user pressing join
+	// sets the servercode and takes user to the join page
 	const joinRoute = async () => {
 		if (serverCode === null) {
 			await AsyncStorage.setItem("serverCode", '');
@@ -130,16 +177,41 @@ export default function Page() {
 		router.replace('/join');
 	};
 
+	// if user is not a premium spotify member they will not be able to host a server
+	const hostingDenied = async () => {
+		Alert.alert(
+			"Not Allowed To Host",
+			"You can not host a server if you are not a Premium member of Spotify.",
+			[
+				{ text: 'OK' }
+			],
+			{ cancelable: false }
+		);
+	};
+
+	// allows user to logout and takes them back to log in page
 	const logout = async () => {
 		await AsyncStorage.setItem("accessToken", '');
 		router.replace('/');
 	};
 
+	// displays the Host button, Server Code text box, Join Button, and Logout button
 	return (
 		<View style={styles.container}>
+			{/* { accountStatus ? (
+				<TouchableOpacity onPress={() => router.replace('/host')}>
+					<Text style={styles.button}>Host</Text>
+				</TouchableOpacity>
+			) : (
+				<TouchableOpacity onPress={() => hostingDenied()}>
+					<Text style={styles.button}>Host</Text>
+				</TouchableOpacity>
+			)} */}
+
 			<TouchableOpacity onPress={() => router.replace('/host')}>
 				<Text style={styles.button}>Host</Text>
 			</TouchableOpacity>
+			
 
 			<TextInput
 				style={styles.input}
