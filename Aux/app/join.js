@@ -6,6 +6,10 @@ import { router } from 'expo-router';
 
 export default function Page() {
 
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // variables
+
     const [socket, setSocket] = React.useState(null);
     const [listUsers, setListUsers] = React.useState({ users: [], host: {} });
     const [theServerCode, setTheServerCode] = React.useState(null);
@@ -16,6 +20,11 @@ export default function Page() {
     const [songSelected, setSongSelected] = React.useState({ song: '', uri: '', artists: '' });
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
     let heartbeatInterval = null;
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // on mount functions
 
     // once user is directed to this page the app will connect them to the server
     // and then attempt to join the serverCode
@@ -102,6 +111,11 @@ export default function Page() {
             newSocket.disconnect();
         };
     }, [])
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // other functions
 
     // function to get the values from async storage
     const getValue = async (key) => {
@@ -113,6 +127,11 @@ export default function Page() {
             console.error("Get value error: ", error);
         }
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // join and leave functions
 
     // if the user is not rejoining a server it will attempt to join a server using the code they entered
     // if the user is rejoining a server it will attempt to rejoin the server they were in before
@@ -226,6 +245,11 @@ export default function Page() {
 
         router.replace('/home');
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // api functions
 
     // validates the access token of the user
     const validateAuth = async () => {
@@ -318,24 +342,6 @@ export default function Page() {
 
     };
 
-    // function that checks the userId of a timedout user
-    // if the userId is the current user's id then it will remove any data associated with server
-    // user will be disconnected from the server
-    // will allow user to rejoin
-    const checkTimeOut = async (userId) => {
-        const myUserId = await getValue("userId");
-
-        if (myUserId === userId) {
-            // disconnect
-
-            await AsyncStorage.removeItem("serverCode");
-            await AsyncStorage.setItem("hosting", "false");
-            await AsyncStorage.setItem("rejoining", "true");
-
-            router.replace('/home');
-        }
-    };
-
     // function that allows user to search for songs within spotify using spotify api
     const searchSong = async () => {
 
@@ -375,6 +381,29 @@ export default function Page() {
             setSongList(null);
         }
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // time out functions
+
+    // function that checks the userId of a timedout user
+    // if the userId is the current user's id then it will remove any data associated with server
+    // user will be disconnected from the server
+    // will allow user to rejoin
+    const checkTimeOut = async (userId) => {
+        const myUserId = await getValue("userId");
+
+        if (myUserId === userId) {
+            // disconnect
+
+            await AsyncStorage.removeItem("serverCode");
+            await AsyncStorage.setItem("hosting", "false");
+            await AsyncStorage.setItem("rejoining", "true");
+
+            router.replace('/home');
+        }
+    };
 
     // function that sends a heartbeat to the server to make sure user does not timeout
     const sendHeartbeat = async (socket, serverCode) => {
@@ -382,6 +411,11 @@ export default function Page() {
         console.log("Sending heartbeat");
         socket.emit("heartbeat", { serverCode: serverCode, userId: userId });
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // song request and voting functions
 
     // function that allows user to submit a song request
     // the song request will be taken to a voting phase for users to vote on one song
@@ -389,6 +423,11 @@ export default function Page() {
     const sendSongRequest = async () => {
 
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // screen
 
     // displays the server code, a countdown for the current phase, the current phase,
     //  a song search textbox, a search button for songs, a list of songs from the search,
@@ -449,7 +488,12 @@ export default function Page() {
             </TouchableOpacity>
         </View>
     );
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// styles
 
 const styles = StyleSheet.create({
     container: {
@@ -475,3 +519,4 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
     },
 });  
+/////////////////////////////////////////////////////////////////////////////////////////////////

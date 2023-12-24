@@ -6,6 +6,10 @@ import { router } from 'expo-router';
 
 export default function Page() {
 
+    
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // Variables
+
     const [socket, setSocket] = React.useState(null);
     const [theServerCode, setTheServerCode] = React.useState(null);
     const [listUsers, setListUsers] = React.useState({ users: [], host: {} });
@@ -13,6 +17,11 @@ export default function Page() {
     const [votingPhase, setVotingPhase] = React.useState(false);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
     let heartbeatInterval = null;
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // On mount functions
 
     // once user is directed to this page of the app
     // it will connect user to the server and attempt to host the server
@@ -98,6 +107,11 @@ export default function Page() {
             newSocket.disconnect();
         };
     }, [])
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+    
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // extra functions
 
     // function to get the values from async storage
     const getValue = async (key) => {
@@ -109,6 +123,11 @@ export default function Page() {
             console.error("Get value error: ", error);
         }
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // server join and leave functions
 
     // function is called when user is directed to this page
     // if the user is not rejoining, it will attempt to host a server and create a unique server code
@@ -148,15 +167,6 @@ export default function Page() {
         await AsyncStorage.setItem("rejoining", "false");
     };
 
-    // if the host timed out it will remove any associated data with the server
-    // will not allow for rejoin
-    // will destroy the server
-    const timedOut = async () => {
-        await AsyncStorage.removeItem("serverCode");
-        await AsyncStorage.setItem("hosting", "false");
-        await AsyncStorage.setItem("rejoining", "false");
-    };
-
     // once the host creates the server and server code, it will start the countdown timer for the phases
     const startServer = async (socket, serverCode) => {
         const userId = await getValue("userId");
@@ -181,6 +191,20 @@ export default function Page() {
 
         router.replace('/home');
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // time out functions
+
+    // if the host timed out it will remove any associated data with the server
+    // will not allow for rejoin
+    // will destroy the server
+    const timedOut = async () => {
+        await AsyncStorage.removeItem("serverCode");
+        await AsyncStorage.setItem("hosting", "false");
+        await AsyncStorage.setItem("rejoining", "false");
+    };
 
     // function that is called once host successfully joined server
     // sends a heart beat to server to avoid timeout
@@ -190,6 +214,11 @@ export default function Page() {
         console.log("Sending heartbeat");
         socket.emit("heartbeat", { serverCode: serverCode, userId: userId });
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // screen
 
     // displays the server code, the countdown, the phase, the list of users in the server, and a leave button
     return (
@@ -219,7 +248,12 @@ export default function Page() {
             </TouchableOpacity>
         </View>
     );
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// styles
 
 const styles = StyleSheet.create({
     container: {
@@ -245,3 +279,4 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
     },
 });  
+/////////////////////////////////////////////////////////////////////////////////////////////////

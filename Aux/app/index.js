@@ -8,28 +8,25 @@ import { router } from 'expo-router';
 
 WebBrowser.maybeCompleteAuthSession();
 
-const authorizationEndpoint = 'https://accounts.spotify.com/authorize';
-const tokenEndpoint = 'https://accounts.spotify.com/api/token';
-const clientId = '43d48850732744018aff88a5692d03d5';
-const scopes = ['user-read-email', 'user-read-private', 'user-read-currently-playing'];
-redirectURI = makeRedirectUri({ native: 'auxapp://callback' });
-// pkce code challenge for spotify OAuth using PKCE for safety
-const challenge = pkceChallenge();
-
-// function to retrieve values from async storage
-const getValue = async (key) => {
-    try {
-        const value = await AsyncStorage.getItem(key);
-        return value;
-
-    } catch (error) {
-        console.error("Get value error: ", error);
-    }
-};
-
 export default function Page() {
 
+    
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // variables
+
     const [login, setLogin] = React.useState(true);
+    const authorizationEndpoint = 'https://accounts.spotify.com/authorize';
+    const tokenEndpoint = 'https://accounts.spotify.com/api/token';
+    const clientId = '43d48850732744018aff88a5692d03d5';
+    const scopes = ['user-read-email', 'user-read-private', 'user-read-currently-playing'];
+    redirectURI = makeRedirectUri({ native: 'auxapp://callback' });
+    // pkce code challenge for spotify OAuth using PKCE for safety
+    const challenge = pkceChallenge();
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // on mount functions
 
     React.useEffect(() => {
 
@@ -62,6 +59,11 @@ export default function Page() {
         validateAuth();
 
     }, []);
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // oauth functions
 
     // the auth request for spotify using expo's OAuth functions
     const [request, response, promptAsync] = useAuthRequest(
@@ -163,6 +165,27 @@ export default function Page() {
 
     };
 
+    // function to validate the authorization
+    // checks to see if the access token is set
+    // if it is then it makes the api call and takes user to the home screen
+    // else it makes the user log in
+    const validateAuth = async () => {
+        const accessToken = await getValue("accessToken");
+
+        if (accessToken) {
+            setLogin(false);
+            apiCall();
+            router.replace('/home');
+        } else {
+            setLogin(true);
+        }
+    };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // api call functions
+
     // function to make a user profile api call to gather necessary information for app purposes
     // stores the username, userId (unique for each user), and account status of the user
     const apiCall = async () => {
@@ -184,22 +207,27 @@ export default function Page() {
                 console.log("Fetch error: ", error);
             })
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    // function to validate the authorization
-    // checks to see if the access token is set
-    // if it is then it makes the api call and takes user to the home screen
-    // else it makes the user log in
-    const validateAuth = async () => {
-        const accessToken = await getValue("accessToken");
+    
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // other functions
 
-        if (accessToken) {
-            setLogin(false);
-            apiCall();
-            router.replace('/home');
-        } else {
-            setLogin(true);
+    // function to retrieve values from async storage
+    const getValue = async (key) => {
+        try {
+            const value = await AsyncStorage.getItem(key);
+            return value;
+
+        } catch (error) {
+            console.error("Get value error: ", error);
         }
     };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // screen
 
     // displays the login screen
     // if user clicks log in it starts the async log in functions from expo's OAuth
@@ -210,7 +238,12 @@ export default function Page() {
             </TouchableOpacity>
         </View>
     );
+    /////////////////////////////////////////////////////////////////////////////////////////////////
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+// styles
 
 const styles = StyleSheet.create({
     container: {
@@ -224,3 +257,4 @@ const styles = StyleSheet.create({
         color: "green",
     },
 });
+/////////////////////////////////////////////////////////////////////////////////////////////////
