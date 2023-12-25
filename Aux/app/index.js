@@ -5,12 +5,13 @@ import pkceChallenge from 'react-native-pkce-challenge';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { router } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Page() {
 
-    
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // variables
 
@@ -18,7 +19,7 @@ export default function Page() {
     const authorizationEndpoint = 'https://accounts.spotify.com/authorize';
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
     const clientId = '43d48850732744018aff88a5692d03d5';
-    const scopes = ['user-read-email', 'user-read-private', 'user-read-currently-playing'];
+    const scopes = ['user-read-email', 'user-read-private', 'user-read-playback-state', 'user-modify-playback-state'];
     redirectURI = makeRedirectUri({ native: 'auxapp://callback' });
     // pkce code challenge for spotify OAuth using PKCE for safety
     const challenge = pkceChallenge();
@@ -74,7 +75,6 @@ export default function Page() {
             usePKCE: true,
             redirectUri: redirectURI,
             codeChallengeMethod: 'S256',
-            codeChallenge: challenge.codeChallenge,
         },
         {
             authorizationEndpoint: authorizationEndpoint
@@ -90,23 +90,23 @@ export default function Page() {
             if (response?.type === 'success') {
 
                 console.log("getting exchange");
-                exchangeCode(response.params.code, request.codeVerifier);
+                exchangeCode();
             }
         }
     }, [response]);
 
     // requesting the exchange token to get access token from spotify using the expo OAuth functions
-    const exchangeCode = async (code, code_verifier) => {
+    const exchangeCode = async () => {
 
         try {
             const tokenResponse = await exchangeCodeAsync(
                 {
                     clientId: clientId,
                     redirectUri: redirectURI,
-                    code: code,
+                    code: response.params.code,
                     extraParams: {
                         grant_type: "authorization_code",
-                        code_verifier: code_verifier,
+                        code_verifier: request.codeVerifier,
                     },
                 },
                 {
@@ -232,11 +232,13 @@ export default function Page() {
     // displays the login screen
     // if user clicks log in it starts the async log in functions from expo's OAuth
     return (
-        <View style={styles.container}>
-            <TouchableOpacity disabled={!request} onPress={() => { promptAsync() }}>
-                <Text style={styles.button}>Login</Text>
-            </TouchableOpacity>
-        </View>
+        <SafeAreaView>
+            <View style={styles.container}>
+                <TouchableOpacity disabled={!request} onPress={() => { promptAsync() }}>
+                    <Text style={styles.button}>Login</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
     );
     /////////////////////////////////////////////////////////////////////////////////////////////////
 }

@@ -1,5 +1,7 @@
 import * as React from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Alert, TextInput, ScrollView } from "react-native";
+import { refreshAsync } from 'expo-auth-session';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import io from 'socket.io-client';
 import { router } from 'expo-router';
@@ -178,7 +180,7 @@ export default function Page() {
         const serverCode = await getValue("serverCode");
 
         if (userId === myUserId) {
-            heartbeatInterval = setInterval(() => {sendHeartbeat(newSocket, serverCode)}, 5000);
+            heartbeatInterval = setInterval(() => {sendHeartbeat(newSocket, serverCode)}, 60000);
         }
     };
 
@@ -433,60 +435,62 @@ export default function Page() {
     //  a song search textbox, a search button for songs, a list of songs from the search,
     //  and a leave server button
     return (
+        
+        <SafeAreaView>
+            <View style={styles.container}>
+                <Text>Server Code: {theServerCode}</Text>
 
-        <View style={styles.container}>
-            <Text>Server Code: {theServerCode}</Text>
+                {countdown && (
+                    <>
+                        <Text>Countdown: {countdown} seconds</Text>
+                        <Text>
+                            {votingPhase ? "Vote the song you want!" : "Search for your song!"}
+                        </Text>
+                    </>
+                )}
 
-            {countdown && (
-                <>
-                    <Text>Countdown: {countdown} seconds</Text>
-                    <Text>
-                        {votingPhase ? "Vote the song you want!" : "Search for your song!"}
-                    </Text>
-                </>
-            )}
+                {countdown && !votingPhase && (
+                    <>
+                        {songSelected.uri !== '' && (
+                            <Text>Song Selected: <Text style={{ color: "green" }}>{songSelected.song} - {songSelected.artists}</Text></Text>
+                        )}
 
-            {countdown && !votingPhase && (
-                <>
-                    {songSelected.uri !== '' && (
-                        <Text>Song Selected: <Text style={{ color: "green" }}>{songSelected.song} - {songSelected.artists}</Text></Text>
-                    )}
+                        <TextInput
+                            style={styles.input}
+                            placeholder="Search for a song"
+                            value={searchParam}
+                            onChangeText={setSearchParam}
+                            returnKeyType='go'
+                            onSubmitEditing={() => searchSong()}
+                        />
 
-                    <TextInput
-                        style={styles.input}
-                        placeholder="Search for a song"
-                        value={searchParam}
-                        onChangeText={setSearchParam}
-                        returnKeyType='go'
-                        onSubmitEditing={() => searchSong()}
-                    />
+                        <TouchableOpacity onPress={() => searchSong()}>
+                            <Text style={styles.button}>Search Song</Text>
+                        </TouchableOpacity>
 
-                    <TouchableOpacity onPress={() => searchSong()}>
-                        <Text style={styles.button}>Search Song</Text>
-                    </TouchableOpacity>
+                        <ScrollView style={{ flex: 0 }}>
+                            {songList && songList.map(item => (
+                                <TouchableOpacity key={item.uri} onPress={() => setSongSelected({ song: item.name, uri: item.uri, artists: item.artist.join(', ') })}>
+                                    <Text style={[{ color: songSelected.uri === item.uri ? 'green' : 'black' }]}>{item.name} - {item.artist.join(', ')}</Text>
+                                </TouchableOpacity>
+                            ))}
+                        </ScrollView>
+                    </>
+                )}
 
-                    <ScrollView style={{ flex: 0 }}>
-                        {songList && songList.map(item => (
-                            <TouchableOpacity key={item.uri} onPress={() => setSongSelected({ song: item.name, uri: item.uri, artists: item.artist.join(', ') })}>
-                                <Text style={[{ color: songSelected.uri === item.uri ? 'green' : 'black' }]}>{item.name} - {item.artist.join(', ')}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </ScrollView>
-                </>
-            )}
+                {/* {listUsers.host && (
+                    <Text>{listUsers.host.username}</Text>
+                )}
 
-            {/* {listUsers.host && (
-                <Text>{listUsers.host.username}</Text>
-            )}
+                {listUsers.users && listUsers.users.map((user, index) => (
+                    <Text key={index}>{user.username}</Text>
+                ))} */}
 
-            {listUsers.users && listUsers.users.map((user, index) => (
-                <Text key={index}>{user.username}</Text>
-            ))} */}
-
-            <TouchableOpacity onPress={() => leaveServer()}>
-                <Text style={styles.button}>Leave</Text>
-            </TouchableOpacity>
-        </View>
+                <TouchableOpacity onPress={() => leaveServer()}>
+                    <Text style={styles.button}>Leave</Text>
+                </TouchableOpacity>
+            </View>
+        </SafeAreaView>
     );
     /////////////////////////////////////////////////////////////////////////////////////////////////
 }

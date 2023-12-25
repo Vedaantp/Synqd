@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image, TextInput, Alert } from "react-native";
+import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import io from 'socket.io-client';
 
 export default function Page() {
 
-	
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
 	// variables
 
@@ -236,38 +237,35 @@ export default function Page() {
 
 	// displays the Host button, Server Code text box, Join Button, and Logout button
 	return (
-		<View style={styles.container}>
-			{/* { accountStatus ? (
-				<TouchableOpacity onPress={() => router.replace('/host')}>
-					<Text style={styles.button}>Host</Text>
+		<SafeAreaView style={styles.container}>
+			<View style={styles.container}>
+				{ accountStatus ? (
+					<TouchableOpacity onPress={() => router.replace('/host')}>
+						<Text style={styles.button}>Host</Text>
+					</TouchableOpacity>
+				) : (
+					<TouchableOpacity onPress={() => hostingDenied()}>
+						<Text style={styles.button}>Host</Text>
+					</TouchableOpacity>
+				)}			
+
+				<TextInput
+					style={styles.input}
+					placeholder="Enter Server Code"
+					value={serverCode}
+					onChangeText={setServerCode}
+					returnKeyType='go'
+					onSubmitEditing={() => joinRoute()}
+				/>
+				<TouchableOpacity onPress={() => joinRoute()}>
+					<Text style={styles.button}>Join</Text>
 				</TouchableOpacity>
-			) : (
-				<TouchableOpacity onPress={() => hostingDenied()}>
-					<Text style={styles.button}>Host</Text>
+
+				<TouchableOpacity onPress={() => logout()}>
+					<Text style={styles.button}>Logout</Text>
 				</TouchableOpacity>
-			)} */}
-
-			<TouchableOpacity onPress={() => router.replace('/host')}>
-				<Text style={styles.button}>Host</Text>
-			</TouchableOpacity>
-			
-
-			<TextInput
-				style={styles.input}
-				placeholder="Enter Server Code"
-				value={serverCode}
-				onChangeText={setServerCode}
-				returnKeyType='go'
-				onSubmitEditing={() => joinRoute()}
-			/>
-			<TouchableOpacity onPress={() => joinRoute()}>
-				<Text style={styles.button}>Join</Text>
-			</TouchableOpacity>
-
-			<TouchableOpacity onPress={() => logout()}>
-				<Text style={styles.button}>Logout</Text>
-			</TouchableOpacity>
-		</View>
+			</View>
+		</SafeAreaView>
 	);
     /////////////////////////////////////////////////////////////////////////////////////////////////
 }
