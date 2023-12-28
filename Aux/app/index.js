@@ -120,7 +120,7 @@ export default function Page() {
             await AsyncStorage.setItem('expiration', expirationTime.toString());
 
             // validates the authorization once access token is received
-            validateAuth();
+            await validateAuth();
 
         } catch (error) {
             setLogin(true);
@@ -156,7 +156,7 @@ export default function Page() {
             await AsyncStorage.setItem('refreshToken', refreshResponse.refreshToken);
             await AsyncStorage.setItem('expiration', expirationTime.toString());
 
-            validateAuth();
+            await validateAuth();
 
         } catch (error) {
             setLogin(true);
@@ -171,11 +171,21 @@ export default function Page() {
     // else it makes the user log in
     const validateAuth = async () => {
         const accessToken = await getValue("accessToken");
+        const expiration = await getValue("expiration");
+        let expirationTime = parseInt(expiration, 10);
+        let currentTime = new Date().getTime();
 
         if (accessToken) {
-            setLogin(false);
-            apiCall();
-            router.replace('/home');
+            // if the token is not expired go to the home screen of the app
+            // else refresh the access token
+            if (currentTime < expirationTime) {
+                setLogin(false);
+                // apiCall();
+                router.replace('/home');
+            } else {
+                setLogin(false);
+                await refreshAccessToken();
+            }
         } else {
             setLogin(true);
         }
@@ -232,7 +242,7 @@ export default function Page() {
     // displays the login screen
     // if user clicks log in it starts the async log in functions from expo's OAuth
     return (
-        <SafeAreaView>
+        <SafeAreaView style={styles.container}>
             <View style={styles.container}>
                 <TouchableOpacity disabled={!request} onPress={() => { promptAsync() }}>
                     <Text style={styles.button}>Login</Text>

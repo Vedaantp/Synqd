@@ -20,7 +20,11 @@ export default function Page() {
     const [searchParam, setSearchParam] = React.useState(null);
     const [songList, setSongList] = React.useState(null);
     const [songSelected, setSongSelected] = React.useState({ song: '', uri: '', artists: '' });
+    const [votingList, setVotingList] = React.useState([]);
+    const [songVoted, setSongVoted] = React.useState({ song: '', uri: '', artists: '' });
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
+    const tokenEndpoint = 'https://accounts.spotify.com/api/token';
+    const clientId = '43d48850732744018aff88a5692d03d5';
     let heartbeatInterval = null;
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -90,10 +94,7 @@ export default function Page() {
                 setVotingPhase(false);
             } else {
                 setVotingPhase(true);
-                setSongList(null);
-                setSearchParam(null);
-
-                sendSongRequest();
+                
             }
 
         });
@@ -106,6 +107,10 @@ export default function Page() {
             console.log("Heartbeat received: ", data);
         });
 
+        newSocket.on("requestedSongs", ({songs}) => {
+            setVotingList(songs);
+        });
+
         setSocket(newSocket);
 
         return () => {
@@ -113,6 +118,23 @@ export default function Page() {
             newSocket.disconnect();
         };
     }, [])
+
+    React.useEffect(() => {
+
+        if (votingPhase) {
+            if (songSelected.uri !== '') {
+                setSongList(null);
+                setSearchParam(null);
+                sendSongRequest();
+                // setSongVoted({ song: '', uri: '', artists: '' });
+            }
+        } else {
+            // setSongSelected({ song: '', uri: '', artists: '' });
+            setVotingList([]);
+            sendVotes();
+        }
+
+    }, [votingPhase]);
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -144,7 +166,7 @@ export default function Page() {
         const rejoin = await getValue("rejoining");
         await AsyncStorage.setItem("hosting", "false");
 
-        if (rejoin === "true") {
+        if (serverCode || rejoin === "true") {
             console.log("User Reconnected to ", serverCode);
             setTheServerCode(serverCode);
 
@@ -349,11 +371,13 @@ export default function Page() {
 
         if (searchParam) {
 
+            // verify accessToken and if not valid refresh it
+            await validateAuth();
+
             const accessToken = await getValue("accessToken");
             const url = `https://api.spotify.com/v1/search?q=${searchParam}&type=track&market=US`;
 
-            // verify accessToken and if not valid refresh it
-            validateAuth();
+            
 
             const spotifySearchParams = {
                 headers: {
@@ -375,7 +399,7 @@ export default function Page() {
 
                 })
                 .catch((error) => {
-                    console.log("Search error: ", error);
+                    console.error("Search error: ", error);
                 })
         } else {
 
@@ -423,7 +447,34 @@ export default function Page() {
     // the song request will be taken to a voting phase for users to vote on one song
     // song winner will be added to the host's queue
     const sendSongRequest = async () => {
+        const userId = await getValue("userId");
+        const serverCode = await getValue("serverCode");
 
+        if (socket) {
+            console.log("Sending request");
+            // setSongVoted({song: '', artists: '', uri: songSelected.uri});
+            socket.emit("songRequest", { serverCode: serverCode, userId: userId, songInfo: songSelected});
+        }
+    };
+
+    const sendVotes = async () => {
+        const userId = await getValue("userId");
+        const serverCode = await getValue("serverCode");
+
+        console.log("Voting: ", songVoted);
+        console.log("Voting: ", songSelected);
+
+        if (socket) {
+            console.log("Sending vote");
+            if (songVoted.uri !== '') {
+                socket.emit("songVote", { serverCode: serverCode, userId: userId, songInfo: songVoted, voted: true});
+            } else {
+                socket.emit("songVote", { serverCode: serverCode, userId: userId, songInfo: songSelected, voted: false});
+            }
+        }
+
+        setSongVoted({ song: '', uri: '', artists: '' });
+        setSongSelected({ song: '', uri: '', artists: '' });
     };
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -448,6 +499,12 @@ export default function Page() {
                         </Text>
                     </>
                 )}
+
+                {votingPhase && votingList.filter(item => item.uri !== songSelected.uri).map(item => (
+                    <TouchableOpacity key={item.uri} onPress={() => setSongVoted({ song: item.song, uri: item.uri, artists: item.artists })}>
+                        <Text style={[{ color: songVoted.uri === item.uri ? 'green' : 'black' }]}>{item.song} - {item.artists}</Text>
+                    </TouchableOpacity>
+                ))}
 
                 {countdown && !votingPhase && (
                     <>

@@ -21,8 +21,11 @@ export default function Page() {
     const [currentSong, setCurrentSong] = React.useState({ name: '', uri: '', image: '', artists: '', timestamp: 0 });
     const [isPaused, setPaused] = React.useState(false);
     const [isSearching, setSearching] = React.useState(false);
+    const [votingPhase, setVotingPhase] = React.useState(false);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
-    const {height: deviceHeight, width: deviceWidth} = Dimensions.get('window');
+    const tokenEndpoint = 'https://accounts.spotify.com/api/token';
+    const clientId = '43d48850732744018aff88a5692d03d5';
+    const { height: deviceHeight, width: deviceWidth } = Dimensions.get('window');
     let heartbeatInterval = null;
     let getCurrent = null;
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -91,8 +94,29 @@ export default function Page() {
             joinError();
         });
 
+        newSocket.on('countdownUpdate', ({ timerIndex, remainingTime }) => {
+
+            if (timerIndex === 0) {
+                setVotingPhase(false);
+            } else {
+                setVotingPhase(true);
+            }
+
+            // if ((remainingTime / 1000) === 27 && timerIndex === 0) {
+            //     console.log("Getting the voted song");
+            //     getVotedSong();
+            // }
+
+            // console.log("Index: ", timerIndex, " Time: ", remainingTime);
+
+        });
+
         newSocket.on("heartbeatReceived", (data) => {
             console.log("Heartbeat received: ", data);
+        });
+
+        newSocket.on("votedSong", ({ uri, requests, votes }) => {
+            console.log("Voted song: ", uri, "requests: ", requests, "votes: ", votes);
         });
 
         setSocket(newSocket);
@@ -104,7 +128,15 @@ export default function Page() {
             clearInterval(getCurrent);
             newSocket.disconnect();
         };
-    }, [])
+    }, []);
+
+    React.useEffect(() => {
+
+        if (!votingPhase) {
+            setTimeout(() => getVotedSong(), 500);
+        }
+
+    }, [votingPhase]);
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -120,6 +152,14 @@ export default function Page() {
         } catch (error) {
             console.error("Get value error: ", error);
         }
+    };
+
+    const showQueue = async () => {
+
+        // Add modal later
+
+        console.log("Song queued!");
+
     };
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -205,7 +245,7 @@ export default function Page() {
         if (accessToken) {
             if (currentTime >= expirationTime) {
                 // do refresh path
-                refreshAccessToken();
+                await refreshAccessToken();
             }
         } else {
 
@@ -297,7 +337,7 @@ export default function Page() {
         if (searchParam) {
 
             // verify accessToken and if not valid refresh it
-            validateAuth();
+            await validateAuth();
 
             const accessToken = await getValue("accessToken");
             const endpoint = `https://api.spotify.com/v1/search?q=${searchParam}&type=track&market=US`;
@@ -334,7 +374,7 @@ export default function Page() {
     const getCurrentPlaying = async () => {
 
         // verify accessToken and if not valid refresh it
-        validateAuth();
+        await validateAuth();
 
         const accessToken = await getValue("accessToken");
         const endpoint = 'https://api.spotify.com/v1/me/player';
@@ -369,6 +409,7 @@ export default function Page() {
                 setCurrentSong(song);
             })
             .catch((error) => {
+                console.error("Get current playback error: ", error);
                 setCurrentSong({ name: '', image: '', artists: '', uri: '' })
             })
     };
@@ -376,7 +417,7 @@ export default function Page() {
     const handleResume = async () => {
 
         // verify accessToken and if not valid refresh it
-        validateAuth();
+        await validateAuth();
 
         const accessToken = await getValue("accessToken");
         const endpoint = 'https://api.spotify.com/v1/me/player/play';
@@ -407,7 +448,7 @@ export default function Page() {
     const handlePause = async () => {
 
         // verify accessToken and if not valid refresh it
-        validateAuth();
+        await validateAuth();
 
         const accessToken = await getValue("accessToken");
         const endpoint = 'https://api.spotify.com/v1/me/player/pause';
@@ -435,7 +476,7 @@ export default function Page() {
     const handleNext = async () => {
 
         // verify accessToken and if not valid refresh it
-        validateAuth();
+        await validateAuth();
 
         const accessToken = await getValue("accessToken");
         const endpoint = 'https://api.spotify.com/v1/me/player/next';
@@ -464,7 +505,7 @@ export default function Page() {
     const handlePrev = async () => {
 
         // verify accessToken and if not valid refresh it
-        validateAuth();
+        await validateAuth();
 
         const accessToken = await getValue("accessToken");
         const endpoint = 'https://api.spotify.com/v1/me/player/previous';
@@ -488,6 +529,36 @@ export default function Page() {
             .catch((error) => {
                 console.error("Previous error: ", error);
             })
+    };
+
+    const handleAddQueue = async (songURI) => {
+
+        // verify accessToken and if not valid refresh it
+        await validateAuth();
+
+        const accessToken = await getValue("accessToken");
+        const endpoint = `https://api.spotify.com/v1/me/player/queue?uri=${songURI}`;
+
+        const spotifyParams = {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+            }
+        };
+
+        await fetch(endpoint, spotifyParams)
+            .then((response) => {
+                if (response.ok) {
+                    console.log("Successfully added song to queue");
+                    getCurrentPlaying();
+                } else {
+                    console.log("Failed to add song to queue", response.status, response.statusText);
+                }
+            })
+            .catch((error) => {
+                console.error("Queue error: ", error);
+            })
+
     };
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -516,6 +587,21 @@ export default function Page() {
 
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
+    // voting functions
+
+    const getVotedSong = async () => {
+        const serverCode = await getValue("serverCode");
+        const userId = await getValue("userId");
+
+        if (socket) {
+            console.log("Socket worked");
+            socket.emit("getVotedSong", { serverCode: serverCode, userId: userId });
+        }
+    };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
     // styles
     const styles = StyleSheet.create({
         container: {
@@ -535,11 +621,20 @@ export default function Page() {
             flex: 0,
             width: '100%',
             flexDirection: 'row',
-    
-            
+
+
         },
         searchOutput: {
             flex: isSearching ? 1 : 0,
+        },
+        searchList: {
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            borderColor: 'gray',
+            borderWidth: 1
+        },
+        songInfo: {
+            flexDirection: 'column'
         },
         backButton: {
             flex: 0,
@@ -557,7 +652,7 @@ export default function Page() {
             height: 30,
             width: 280,
             borderColor: 'gray',
-            borderWidth: 1,        
+            borderWidth: 1,
         },
         serverInfo: {
             flex: 0,
@@ -579,9 +674,9 @@ export default function Page() {
             width: .75 * deviceWidth,
             height: .75 * deviceWidth,
             marginTop: 75,
-            marginBottom: 10            
+            marginBottom: 10
         },
-        
+
     });
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -604,23 +699,23 @@ export default function Page() {
                         <>
                             <View style={styles.search}>
                                 <View style={styles.searchInput}>
-                                    { isSearching && (
-                                        <TouchableOpacity style={{paddingLeft: 10, paddingRight: 10, width: '20%'}} onPress={() => {
+                                    {isSearching && (
+                                        <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, width: '20%' }} onPress={() => {
                                             setSearching(false);
                                             setSearchParam(null);
                                             setSongList(null);
                                             Keyboard.dismiss();
-                                            }}>
+                                        }}>
                                             <Text style={styles.backButton}>Back</Text>
                                         </TouchableOpacity>
                                     )}
 
-                                    { !isSearching && (
-                                        <TouchableOpacity style={{paddingLeft: 10, paddingRight: 10, width: '20%'}} onPress={() => leaveServer()}>
+                                    {!isSearching && (
+                                        <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, width: '20%' }} onPress={() => leaveServer()}>
                                             <Text style={styles.leaveButton}>End</Text>
                                         </TouchableOpacity>
                                     )}
-                                    
+
                                     <TextInput
                                         style={styles.input}
                                         placeholder="Search for a song"
@@ -633,12 +728,18 @@ export default function Page() {
                                 </View>
 
                                 <View style={styles.searchOutput}>
-                                    { isSearching && (
+                                    {isSearching && (
                                         <ScrollView>
                                             {songList && songList.map(item => (
-                                                <TouchableOpacity key={item.uri} onPress={() => setSongSelected({ song: item.name, uri: item.uri, artists: item.artist })}>
-                                                    <Text style={[{ color: songSelected.uri === item.uri ? 'green' : 'black' }]}>{item.name} - {item.artist}</Text>
-                                                </TouchableOpacity>
+                                                <View key={item.uri} style={styles.searchList}>
+                                                    <TouchableOpacity style={{ paddingRight: 10, fontSize: 25, justifyContent: 'center' }} onPress={() => { setSongSelected({ song: item.name, uri: item.uri, artists: item.artist }); showQueue(); handleAddQueue(item.uri);}}>
+                                                        <Text>Queue</Text>
+                                                    </TouchableOpacity>
+                                                    <View style={styles.songInfo}>
+                                                        <Text style={{ fontSize: 15 }}>{item.name}</Text>
+                                                        <Text style={{ fontSize: 10 }}>{item.artist}</Text>
+                                                    </View>
+                                                </View>
                                             ))}
                                         </ScrollView>
                                     )}
@@ -646,18 +747,14 @@ export default function Page() {
                             </View>
 
                             <View style={styles.serverInfo}>
-                                { !isSearching && (
+                                {!isSearching && (
                                     <>
                                         <Text>{theServerCode}</Text>
 
-                                        {songSelected.uri !== '' && (
-                                            <Text>Song Selected: <Text style={{ color: "green" }}>{songSelected.song} - {songSelected.artists}</Text></Text>
-                                        )}
-            
                                         {listUsers.host && (
                                             <Text>{listUsers.host.username}</Text>
                                         )}
-            
+
                                         {listUsers.users && listUsers.users.map((user, index) => (
                                             <Text key={index}>{user.username}</Text>
                                         ))}

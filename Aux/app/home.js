@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View, Image, TextInput, Alert } from "react-native";
+import { refreshAsync } from 'expo-auth-session';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
@@ -14,6 +15,8 @@ export default function Page() {
 	const [serverCode, setServerCode] = React.useState(null);
 	const [accountStatus, setAccountStatus] = React.useState(false);
 	const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
+    const tokenEndpoint = 'https://accounts.spotify.com/api/token';
+	const clientId = '43d48850732744018aff88a5692d03d5';
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -31,12 +34,142 @@ export default function Page() {
 	}, []);
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+	// Api calls
+
+	const validateAuth = async () => {
+        const accessToken = await getValue("accessToken");
+        const expiration = await getValue("expiration");
+        let expirationTime = parseInt(expiration, 10);
+        let currentTime = new Date().getTime();
+
+        if (accessToken) {
+            if (currentTime >= expirationTime) {
+                // do refresh path
+                await refreshAccessToken();
+            }
+        } else {
+
+            console.log("Access token was invalid");
+
+            // do login path
+            const userId = await getValue("userId");
+            const serverCode = await getValue("serverCode");
+
+            socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
+
+            await AsyncStorage.removeItem("serverCode");
+            await AsyncStorage.removeItem("accessToken");
+            await AsyncStorage.setItem("hosting", "false");
+            await AsyncStorage.setItem("rejoining", "false");
+
+            Alert.alert(
+                'Authentication Error',
+                'We were not able to authenticate your Spotify account. Please login again. Thank you.',
+                [
+                    { text: 'OK' }
+                ],
+                { cancelable: false }
+            );
+
+            router.replace('/');
+        }
+    };
+
+    // function that will try to refresh the access token with spotify
+    const refreshAccessToken = async () => {
+
+        try {
+
+            const refreshToken = await getValue("refreshToken");
+
+            const refreshResponse = await refreshAsync(
+                {
+                    extraParams: {
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        grant_type: "refresh_token",
+                    },
+                    clientId: clientId,
+                    refreshToken: refreshToken,
+                },
+                {
+                    tokenEndpoint: tokenEndpoint,
+                }
+            );
+
+            const expirationTime = new Date().getTime() + refreshResponse.expiresIn * 1000;
+            await AsyncStorage.setItem('accessToken', refreshResponse.accessToken);
+            await AsyncStorage.setItem('refreshToken', refreshResponse.refreshToken);
+            await AsyncStorage.setItem('expiration', expirationTime.toString());
+
+        } catch (error) {
+
+            console.error("Refresh error: ", error);
+            // do login path
+            const userId = await getValue("userId");
+            const serverCode = await getValue("serverCode");
+
+            socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
+
+            await AsyncStorage.removeItem("serverCode");
+            await AsyncStorage.removeItem("accessToken");
+            await AsyncStorage.setItem("hosting", "false");
+            await AsyncStorage.setItem("rejoining", "false");
+
+            Alert.alert(
+                'Authentication Error',
+                'We were not able to authenticate your Spotify account. Please login again. Thank you.',
+                [
+                    { text: 'OK' }
+                ],
+                { cancelable: false }
+            );
+
+            router.replace('/');
+        }
+
+    };
+
+	const apiCall = async () => {
+
+		await validateAuth();
+
+        const accessToken = await getValue("accessToken");
+
+        await fetch('https://api.spotify.com/v1/me', {
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+            }
+        })
+            .then((response) => response.json())
+            .then((data) => {
+				console.log("Data retreived");
+                AsyncStorage.setItem("username", data.display_name);
+                AsyncStorage.setItem("userId", data.id);
+                AsyncStorage.setItem("accountStatus", data.product);
+            })
+            .catch((error) => {
+                console.log("Fetch error: ", error);
+				AsyncStorage.removeItem("accessToken");
+				AsyncStorage.removeItem("username");
+                AsyncStorage.removeItem("userId");
+                AsyncStorage.removeItem("accountStatus");
+				router.replace("/");
+            })
+    };
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
 	// account type functions
 
 	// function to check the users spotify account type and sets the value in use State
-	const checkAccountStatus = async () => {
+	async function checkAccountStatus() {
+
+		await apiCall();
+
 		const product = await getValue('accountStatus');
 
 		if (product === 'premium') {
@@ -276,9 +409,9 @@ export default function Page() {
 
 const styles = StyleSheet.create({
 	container: {
-		// flex: 1,
+		flex: 1,
 		// justifyContent: 'center',
-		// alignItems: "center",
+		alignItems: "center",
 	},
 	button: {
 		fontWeight: "bold",

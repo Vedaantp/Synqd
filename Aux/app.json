@@ -17,18 +17,18 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.Aux",
+      "bundleIdentifier": "com.Aux", // com.aux.app for builds
       "config": {
         "usesNonExemptEncryption": false
-      },
-      "googleServicesFile": "./GoogleService-Info.plist"
+      }
+      // "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "com.Aux"
+      "package": "com.aux.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -39,17 +39,17 @@
       }
     },
     "plugins": [
-      "expo-router",
-      "@react-native-firebase/app",
-      "expo-build-properties",
-      [
-        "expo-build-properties",
-        {
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
-      ]
+      "expo-router"
+      // "@react-native-firebase/app",
+      // "expo-build-properties",
+      // [
+      //   "expo-build-properties",
+      //   {
+      //     "ios": {
+      //       "useFrameworks": "static"
+      //     }
+      //   }
+      // ]
     ]
   }
 }
