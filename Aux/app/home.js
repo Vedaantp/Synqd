@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Image, TextInput, Alert } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Pressable, Image, TextInput, Alert, StatusBar, TouchableWithoutFeedback, Keyboard } from "react-native";
 import { refreshAsync } from 'expo-auth-session';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import LinearGradient from 'react-native-linear-gradient';
 import { router } from 'expo-router';
 import io from 'socket.io-client';
 
@@ -327,17 +328,38 @@ export default function Page() {
     /////////////////////////////////////////////////////////////////////////////////////////////////
 	// join and host functions
 
+	// function that handles checking server if it is online
+	const checkServerStatus = async () => {
+		try {
+			const response = await fetch('https://aux-server-88bcd769a4b4.herokuapp.com/serverStatus');
+			
+			if (response.status === 200) {
+				return true;
+			} else {
+				return false;
+			}
+		} catch (error) {
+			console.error("Server status error: ", error);
+			return false;
+		}
+	};
+
 	// function that handles user pressing join
 	// sets the servercode and takes user to the join page
 	const joinRoute = async () => {
-		if (serverCode === null) {
-			await AsyncStorage.setItem("serverCode", '');
 
-		} else {
-			await AsyncStorage.setItem("serverCode", serverCode);
+		if (await checkServerStatus()) {
+
+
+			if (serverCode === null) {
+				await AsyncStorage.setItem("serverCode", '');
+
+			} else {
+				await AsyncStorage.setItem("serverCode", serverCode);
+			}
+
+			router.replace('/join');
 		}
-
-		router.replace('/join');
 	};
 
 	// if user is not a premium spotify member they will not be able to host a server
@@ -370,35 +392,72 @@ export default function Page() {
 
 	// displays the Host button, Server Code text box, Join Button, and Logout button
 	return (
-		<SafeAreaView style={styles.container}>
-			<View style={styles.container}>
-				{ accountStatus ? (
-					<TouchableOpacity onPress={() => router.replace('/host')}>
-						<Text style={styles.button}>Host</Text>
-					</TouchableOpacity>
-				) : (
-					<TouchableOpacity onPress={() => hostingDenied()}>
-						<Text style={styles.button}>Host</Text>
-					</TouchableOpacity>
-				)}			
+		<LinearGradient
+			colors={['rgb(31, 31, 31)', 'rgb(31, 31, 31)']}
+			start={{ x: 0, y: 0 }}
+			end={{ x: 0, y: 1 }}
+			style={styles.container}
+		>
+			<SafeAreaView style={styles.container}>
+				<StatusBar barStyle='light-content' />
+				<TouchableWithoutFeedback style={styles.container} onPress={() => {Keyboard.dismiss()}}>
+					<View style={styles.container}>
+						<View style={styles.routeButtons}>
+							{ accountStatus ? (
+								<TouchableOpacity onPress={async () => {
+									if (await checkServerStatus()) {
+										router.replace('/host');
+									}
+								}}>
+									<LinearGradient
+										colors={['#7D00D1', '#61079d']}
+										style={styles.hostButton}
+										start={{ x: 0, y: 1 }}
+										end={{ x: 1, y: 0 }}
+									>
+										<Text style={styles.host}>Host</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+							) : (
+								<TouchableOpacity onPress={() => hostingDenied()}>
+									<LinearGradient
+										colors={['#7D00D1', '#61079d']}
+										style={styles.hostButton}
+										start={{ x: 0, y: 1 }}
+										end={{ x: 1, y: 0 }}
+									>
+										<Text style={styles.host}>Host</Text>
+									</LinearGradient>
+								</TouchableOpacity>
+							)}			
 
-				<TextInput
-					style={styles.input}
-					placeholder="Enter Server Code"
-					value={serverCode}
-					onChangeText={setServerCode}
-					returnKeyType='go'
-					onSubmitEditing={() => joinRoute()}
-				/>
-				<TouchableOpacity onPress={() => joinRoute()}>
-					<Text style={styles.button}>Join</Text>
-				</TouchableOpacity>
+							<TextInput
+								style={styles.input}
+								placeholder="Enter Code"
+								placeholderTextColor='white'
+								value={serverCode}
+								onChangeText={setServerCode}
+								returnKeyType='join'
+								keyboardAppearance='dark'
+								keyboardType='numbers-and-punctuation'
+								maxLength={6}
+								onSubmitEditing={() => {
+									if (serverCode && (serverCode.toString()).length === 6){ 
+										joinRoute()
+									}
+								}}
+								textAlign='center'
+							/>
+						</View>
 
-				<TouchableOpacity onPress={() => logout()}>
-					<Text style={styles.button}>Logout</Text>
-				</TouchableOpacity>
-			</View>
-		</SafeAreaView>
+						<TouchableOpacity onPress={() => logout()}>
+							<Text style={styles.logout}>Log Out</Text>
+						</TouchableOpacity>
+						
+					</View>
+				</TouchableWithoutFeedback>
+			</SafeAreaView>
+		</LinearGradient>
 	);
     /////////////////////////////////////////////////////////////////////////////////////////////////
 }
@@ -410,13 +469,36 @@ export default function Page() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		// justifyContent: 'center',
+		justifyContent: 'center',
 		alignItems: "center",
 	},
-	button: {
+	routeButtons: {
+		flex: 1,
+		justifyContent: 'center',
+		alignItems: "center",
+	},
+	hostButton: {
+		color: "#7D00D1",
+		marginBottom: 10,
+
+		width: 150,
+		height: 60,
+		borderRadius: 25,
+		paddingHorizontal: 15,
+		justifyContent: 'center',
+		alignItems: 'center'
+	},
+	host: {
+		fontWeight: "bold",
+		fontSize: 40,
+		color: "white",
+	},
+	logout: {
 		fontWeight: "bold",
 		fontSize: 25,
-		color: "blue",
+		color: "#7D00D1",
+		marginBottom: 50,
+
 	},
 	image: {
 		width: 200,
@@ -424,11 +506,16 @@ const styles = StyleSheet.create({
 		marginVertical: 10,
 	},
 	input: {
-		height: 40,
-		borderColor: 'gray',
+		flex: 0,
+		height: 50,
+		width: 175,
+		fontSize: 25,
+		borderColor: '#7D00D1',
+		borderRadius: 25,
 		borderWidth: 1,
-		marginBottom: 10,
-		paddingHorizontal: 10,
+		marginVertical: 10,
+		paddingHorizontal: 15,
+		color: 'white',
 	},
 });  
 /////////////////////////////////////////////////////////////////////////////////////////////////

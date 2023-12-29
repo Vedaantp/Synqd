@@ -1,10 +1,15 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Alert, TextInput, ScrollView, Image, TouchableWithoutFeedback, Keyboard, Dimensions } from "react-native";
+import { StyleSheet, Text, View, StatusBar, TouchableOpacity, Alert, TextInput, ScrollView, Image, TouchableWithoutFeedback, Keyboard, Dimensions, Linking } from "react-native";
+import LinearGradient from 'react-native-linear-gradient';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
+import { FontAwesome5 } from '@expo/vector-icons';
+import { AntDesign } from '@expo/vector-icons';
 import { refreshAsync } from 'expo-auth-session';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import io from 'socket.io-client';
-import { router } from 'expo-router';
+import { Link, router } from 'expo-router';
 
 export default function Page() {
 
@@ -22,6 +27,7 @@ export default function Page() {
     const [isPaused, setPaused] = React.useState(false);
     const [isSearching, setSearching] = React.useState(false);
     const [votingPhase, setVotingPhase] = React.useState(false);
+    const [showInfo, setShowInfo] = React.useState(false);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
     const clientId = '43d48850732744018aff88a5692d03d5';
@@ -101,22 +107,19 @@ export default function Page() {
             } else {
                 setVotingPhase(true);
             }
-
-            // if ((remainingTime / 1000) === 27 && timerIndex === 0) {
-            //     console.log("Getting the voted song");
-            //     getVotedSong();
-            // }
-
-            // console.log("Index: ", timerIndex, " Time: ", remainingTime);
-
         });
 
         newSocket.on("heartbeatReceived", (data) => {
             console.log("Heartbeat received: ", data);
         });
 
-        newSocket.on("votedSong", ({ uri, requests, votes }) => {
-            console.log("Voted song: ", uri, "requests: ", requests, "votes: ", votes);
+        newSocket.on("votedSong", ({ uri }) => {
+            console.log("Voted song: ", uri);
+
+            if (uri !== '') {
+                handleAddQueue(uri);
+            }
+
         });
 
         setSocket(newSocket);
@@ -402,11 +405,11 @@ export default function Page() {
                     setPaused(true);
                 }
 
-                // if (currentSong.uri !== song.uri) {
-                //     setCurrentSong(song);
-                // }
+                if (currentSong.uri !== song.uri) {
+                    setCurrentSong(song);
+                }
 
-                setCurrentSong(song);
+                // setCurrentSong(song);
             })
             .catch((error) => {
                 console.error("Get current playback error: ", error);
@@ -594,7 +597,6 @@ export default function Page() {
         const userId = await getValue("userId");
 
         if (socket) {
-            console.log("Socket worked");
             socket.emit("getVotedSong", { serverCode: serverCode, userId: userId });
         }
     };
@@ -610,12 +612,12 @@ export default function Page() {
             margin: 0,
             top: 0,
             bottom: 0,
-            backgroundColor: 'lightgray',
         },
         search: {
             flex: isSearching ? 1 : 0,
             flexDirection: 'column',
             alignItems: 'center',
+            marginTop: 5
         },
         searchInput: {
             flex: 0,
@@ -649,34 +651,95 @@ export default function Page() {
             alignItems: 'center'
         },
         input: {
-            height: 30,
-            width: 280,
-            borderColor: 'gray',
+            height: 40,
+            width: 250,
+            paddingLeft: 15,
+            fontSize: 15,
+            borderColor: '#7D00D1',
+            borderRadius: 25,
             borderWidth: 1,
+            color: 'white',
+            justifyContent: 'center',
+            alignContent: 'center'
         },
         serverInfo: {
             flex: 0,
+            marginTop: 40,
+            // height: 100,
             flexDirection: 'column',
             alignItems: 'center',
+        },
+        serverCode: {
+            fontWeight: 'bold',
+            fontSize: 23,
+            color: "#7D00D1",
+            marginBottom: 40
         },
         song: {
             flex: isSearching ? 0 : 1,
             flexDirection: 'column',
             alignItems: 'center'
         },
+        songInfo: {
+            flex: 0,
+            flexDirection: 'column',
+            alignItems: 'center',
+            marginTop: 15,
+            marginBottom: 20
+        },
+        songName: {
+            color: 'white',
+            fontSize: 17,
+            fontWeight: 'bold'
+        },
+        artist: {
+            color: 'white',
+            fontSize: 13,
+            fontWeight: 'bold'
+        },
         button: {
             fontWeight: "bold",
-            fontSize: 25,
-            color: "blue",
-            paddingHorizontal: 30,
+            paddingHorizontal: 15,
+            alignItems: 'center',
+            justifyContent: 'center',
         },
         image: {
-            width: .75 * deviceWidth,
-            height: .75 * deviceWidth,
-            marginTop: 75,
-            marginBottom: 10
+            width: .85 * deviceWidth,
+            height: .85 * deviceWidth,
+            marginTop: 25,
+            marginBottom: 0
         },
-
+        info: {
+            flex: 0,
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginTop: 5,
+        },
+        infoHeader: {
+            color: '#7D00D1',
+            fontSize: 35,
+            fontWeight: "bold",
+            justifyContent: 'center',
+            alignItems: 'center',
+            left: '85%',
+        },
+        hostLabel: {
+            fontWeight: 'bold',
+            fontSize: 22,
+            color: "#7D00D1",
+            marginBottom: 5
+        },
+        membersLabel: {
+            fontWeight: 'bold',
+            fontSize: 22,
+            color: "#7D00D1",
+            marginTop: 25,
+            marginBottom: 5
+        },
+        users: {
+            color: "#7D00D1",
+            fontSize: 18
+        },
     });
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -688,119 +751,169 @@ export default function Page() {
     // a search box to find a song, a search button, a label that tells what song user selected, and a list of
     // songs from search
     return (
-        <SafeAreaView style={styles.container}>
-            <TouchableWithoutFeedback style={styles.container} onPress={() => {
-                if (isSearching) {
-                    Keyboard.dismiss()
-                }
-            }}>
-                <View style={styles.container}>
-                    {theServerCode && (
-                        <>
-                            <View style={styles.search}>
-                                <View style={styles.searchInput}>
-                                    {isSearching && (
-                                        <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, width: '20%' }} onPress={() => {
-                                            setSearching(false);
-                                            setSearchParam(null);
-                                            setSongList(null);
-                                            Keyboard.dismiss();
-                                        }}>
-                                            <Text style={styles.backButton}>Back</Text>
-                                        </TouchableOpacity>
-                                    )}
-
-                                    {!isSearching && (
-                                        <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, width: '20%' }} onPress={() => leaveServer()}>
-                                            <Text style={styles.leaveButton}>End</Text>
-                                        </TouchableOpacity>
-                                    )}
-
-                                    <TextInput
-                                        style={styles.input}
-                                        placeholder="Search for a song"
-                                        value={searchParam}
-                                        onChangeText={setSearchParam}
-                                        returnKeyType='go'
-                                        onSubmitEditing={() => searchSong()}
-                                        onFocus={() => setSearching(true)}
-                                    />
-                                </View>
-
-                                <View style={styles.searchOutput}>
-                                    {isSearching && (
-                                        <ScrollView>
-                                            {songList && songList.map(item => (
-                                                <View key={item.uri} style={styles.searchList}>
-                                                    <TouchableOpacity style={{ paddingRight: 10, fontSize: 25, justifyContent: 'center' }} onPress={() => { setSongSelected({ song: item.name, uri: item.uri, artists: item.artist }); showQueue(); handleAddQueue(item.uri);}}>
-                                                        <Text>Queue</Text>
-                                                    </TouchableOpacity>
-                                                    <View style={styles.songInfo}>
-                                                        <Text style={{ fontSize: 15 }}>{item.name}</Text>
-                                                        <Text style={{ fontSize: 10 }}>{item.artist}</Text>
-                                                    </View>
-                                                </View>
-                                            ))}
-                                        </ScrollView>
-                                    )}
-                                </View>
-                            </View>
-
-                            <View style={styles.serverInfo}>
-                                {!isSearching && (
-                                    <>
-                                        <Text>{theServerCode}</Text>
-
-                                        {listUsers.host && (
-                                            <Text>{listUsers.host.username}</Text>
-                                        )}
-
-                                        {listUsers.users && listUsers.users.map((user, index) => (
-                                            <Text key={index}>{user.username}</Text>
-                                        ))}
-                                    </>
-                                )}
-                            </View>
-
-                            <View style={styles.song}>
-                                {!isSearching && (
-                                    <>
-                                        {currentSong.uri !== '' && (
-                                            <>
-                                                <Image source={{ uri: currentSong.image }} style={styles.image}></Image>
-                                                <Text>{currentSong.name}</Text>
-                                                <Text>{currentSong.artists}</Text>
-                                            </>
-
-                                        )}
-
-                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
-                                            <TouchableOpacity onPress={() => handlePrev()}>
-                                                <Text style={styles.button}>Prev</Text>
-                                            </TouchableOpacity>
-
-                                            {isPaused ? (
-                                                <TouchableOpacity onPress={() => handleResume()}>
-                                                    <Text style={styles.button}>Resume</Text>
-                                                </TouchableOpacity>
-                                            ) : (
-                                                <TouchableOpacity onPress={() => handlePause()}>
-                                                    <Text style={styles.button}>Pause</Text>
+        <LinearGradient
+            colors={['rgb(31, 31, 31)', 'rgb(31, 31, 31)']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 0, y: 1 }}
+            style={styles.container}
+        >
+            <SafeAreaView style={styles.container}>
+                <StatusBar barStyle='light-content' />
+                <TouchableWithoutFeedback style={styles.container} onPress={() => {
+                    if (isSearching) {
+                        Keyboard.dismiss()
+                    }
+                }}>
+                    {!showInfo ? (
+                        <View style={styles.container}>
+                            {theServerCode && (
+                                <>
+                                    <View style={styles.search}>
+                                        <View style={styles.searchInput}>
+                                            {isSearching && (
+                                                <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, width: '20%', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                                                    setSearching(false);
+                                                    setSearchParam(null);
+                                                    setSongList(null);
+                                                    Keyboard.dismiss();
+                                                }}>
+                                                    <Ionicons name="arrow-back" size={40} color="#7D00D1" />
                                                 </TouchableOpacity>
                                             )}
 
-                                            <TouchableOpacity onPress={() => handleNext()}>
-                                                <Text style={styles.button}>Next</Text>
-                                            </TouchableOpacity>
+                                            {!isSearching && (
+                                                <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, width: '20%', justifyContent: 'center', alignItems: 'center' }} onPress={() => leaveServer()}>
+                                                    <MaterialIcons name="exit-to-app" size={40} color="#7D00D1" />
+                                                </TouchableOpacity>
+                                            )}
+
+                                            <TextInput
+                                                style={styles.input}
+                                                placeholder="Search for a song"
+                                                placeholderTextColor={'white'}
+                                                value={searchParam}
+                                                onChangeText={setSearchParam}
+                                                keyboardAppearance='dark'
+                                                returnKeyType='search'
+                                                onSubmitEditing={() => searchSong()}
+                                                onFocus={() => setSearching(true)}
+                                            />
+
+                                            {!isSearching && (
+                                                <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, width: '20%', justifyContent: 'center', alignItems: 'center' }} onPress={() => setShowInfo(true)}>
+                                                    <Ionicons name="information-circle-outline" size={40} color="#7D00D1" />
+                                                </TouchableOpacity>
+                                            )}
                                         </View>
-                                    </>
-                                )}
+
+                                        <View style={styles.searchOutput}>
+                                            {isSearching && (
+                                                <ScrollView>
+                                                    {songList && songList.map(item => (
+                                                        <View key={item.uri} style={styles.searchList}>
+                                                            <TouchableOpacity style={{ paddingRight: 10, fontSize: 25, justifyContent: 'center' }} onPress={() => { setSongSelected({ song: item.name, uri: item.uri, artists: item.artist }); showQueue(); handleAddQueue(item.uri); }}>
+                                                                <Text>Queue</Text>
+                                                            </TouchableOpacity>
+                                                            <View style={styles.songInfo}>
+                                                                <Text style={{ fontSize: 15 }}>{item.name}</Text>
+                                                                <Text style={{ fontSize: 10 }}>{item.artist}</Text>
+                                                            </View>
+                                                        </View>
+                                                    ))}
+                                                </ScrollView>
+                                            )}
+                                        </View>
+                                    </View>
+
+                                    <View style={styles.serverInfo}>
+                                        {!isSearching && (
+                                            <Text style={styles.serverCode}>Code: {theServerCode}</Text>
+                                        )}
+                                    </View>
+
+                                    <View style={styles.song}>
+                                        {!isSearching && (
+                                            <>
+                                                {currentSong.uri !== '' ? (
+                                                    <>
+                                                        <Image source={{ uri: currentSong.image }} style={styles.image}></Image>
+                                                        <View style={styles.songInfo}>
+                                                            <Text style={styles.songName}>{currentSong.name}</Text>
+                                                            <Text style={styles.artist}>{currentSong.artists}</Text>
+                                                        </View>
+
+
+                                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
+                                                            <TouchableOpacity onPress={() => handlePrev()}>
+                                                                <MaterialIcons style={styles.button} name="skip-previous" size={85} color="#7D00D1" />
+                                                            </TouchableOpacity>
+
+                                                            {isPaused ? (
+                                                                <TouchableOpacity onPress={() => handleResume()}>
+                                                                    <FontAwesome5 style={styles.button} name="play" size={100} color="#7D00D1" />
+                                                                </TouchableOpacity>
+                                                            ) : (
+                                                                <TouchableOpacity onPress={() => handlePause()}>
+                                                                    <AntDesign style={styles.button} name="pausecircle" size={100} color="#7D00D1" />
+                                                                </TouchableOpacity>
+                                                            )}
+
+                                                            <TouchableOpacity onPress={() => handleNext()}>
+                                                                <MaterialIcons style={styles.button} name="skip-next" size={85} color="#7D00D1" />
+                                                            </TouchableOpacity>
+                                                        </View>
+                                                    </>
+                                                ) : (
+
+                                                    <>
+                                                        <TouchableOpacity onPress={() => Linking.openURL("spotify://")}>
+                                                            <Image source={require('../images/spotify-icon.png')} style={styles.image} />
+                                                        </TouchableOpacity>
+
+                                                        <Text>Spotify Not Playing</Text>
+                                                        <Text>Please Start Playing on Spotify</Text>
+                                                    </>
+
+                                                )}
+
+                                            </>
+                                        )}
+                                    </View>
+                                </>
+                            )}
+                        </View>
+                    ) : (
+                        <View style={styles.container}>
+                            <View style={styles.info}>
+                                <TouchableOpacity 
+                                style={{ paddingLeft: 10, paddingRight: 10, width: '20%', justifyContent: 'center', alignItems: 'center' }} 
+                                onPress={() => setShowInfo(false)}>
+                                    <Ionicons name="arrow-back" size={40} color="#7D00D1" />
+                                </TouchableOpacity>
+
+                                <Text style={styles.infoHeader}>Server Info</Text>
                             </View>
-                        </>
+
+                            <View style={styles.serverInfo}>
+                                <Text style={styles.serverCode}>Code: {theServerCode}</Text>
+
+                                <Text style={styles.hostLabel}>Host:</Text>
+
+                                {listUsers.host && (
+                                    <Text style={styles.users}>{listUsers.host.username}</Text>
+                                )}
+
+                                <Text style={styles.membersLabel}>Members: </Text>
+                                {listUsers.users && listUsers.users.map((user, index) => (
+                                    <Text style={styles.users} key={index}>{user.username}</Text>
+                                ))}
+                            </View>
+                        </View>
                     )}
-                </View>
-            </TouchableWithoutFeedback>
-        </SafeAreaView>
+
+                </TouchableWithoutFeedback>
+            </SafeAreaView>
+        </LinearGradient>
 
     );
     /////////////////////////////////////////////////////////////////////////////////////////////////

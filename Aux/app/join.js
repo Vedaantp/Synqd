@@ -165,8 +165,8 @@ export default function Page() {
         const serverCode = await getValue("serverCode");
         const rejoin = await getValue("rejoining");
         await AsyncStorage.setItem("hosting", "false");
-
-        if (serverCode || rejoin === "true") {
+        
+        if (rejoin === "true") {
             console.log("User Reconnected to ", serverCode);
             setTheServerCode(serverCode);
 

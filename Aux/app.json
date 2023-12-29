@@ -17,7 +17,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.Aux", // com.aux.app for builds
+      "bundleIdentifier": "com.aux.app", // com.aux.app for builds com.Aux for sim
       "config": {
         "usesNonExemptEncryption": false
       }
