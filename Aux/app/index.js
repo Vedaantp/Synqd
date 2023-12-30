@@ -3,9 +3,10 @@ import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, exchangeCodeAsync, refreshAsync } from 'expo-auth-session';
 import pkceChallenge from 'react-native-pkce-challenge';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
+import LinearGradient from 'react-native-linear-gradient';
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -23,6 +24,7 @@ export default function Page() {
     redirectURI = makeRedirectUri({ native: 'auxapp://callback' });
     // pkce code challenge for spotify OAuth using PKCE for safety
     const challenge = pkceChallenge();
+    const insets = useSafeAreaInsets();
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -242,13 +244,23 @@ export default function Page() {
     // displays the login screen
     // if user clicks log in it starts the async log in functions from expo's OAuth
     return (
-        <SafeAreaView style={styles.container}>
-            <View style={styles.container}>
-                <TouchableOpacity disabled={!request} onPress={() => { promptAsync() }}>
-                    <Text style={styles.button}>Login</Text>
-                </TouchableOpacity>
-            </View>
-        </SafeAreaView>
+        <LinearGradient
+			colors={['rgb(31, 31, 31)', 'rgb(31, 31, 31)']}
+			start={{ x: 0, y: 0 }}
+			end={{ x: 0, y: 1 }}
+			style={styles.container}
+		>
+            <SafeAreaView style={styles.container}>
+                <View style={styles.container}>
+                    <TouchableOpacity style={styles.button} disabled={!request} onPress={() => { promptAsync() }}>
+                        {/* <Text style={styles.button}>Login</Text> */}
+                        <Image style={styles.logo} source={require("../images/spotify-logo.png")}/>
+                    </TouchableOpacity>
+                </View>
+            </SafeAreaView>
+
+        </LinearGradient>
+        
     );
     /////////////////////////////////////////////////////////////////////////////////////////////////
 }
@@ -264,9 +276,14 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     button: {
-        fontWeight: "bold",
-        fontSize: 25,
-        color: "green",
+
+        backgroundColor: 'black',
+        borderRadius: 50,
+        borderWidth: 5,
     },
+    logo: {
+        width: 250,
+        height: 75
+    }
 });
 /////////////////////////////////////////////////////////////////////////////////////////////////

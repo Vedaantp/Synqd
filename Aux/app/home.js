@@ -54,11 +54,6 @@ export default function Page() {
             console.log("Access token was invalid");
 
             // do login path
-            const userId = await getValue("userId");
-            const serverCode = await getValue("serverCode");
-
-            socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
-
             await AsyncStorage.removeItem("serverCode");
             await AsyncStorage.removeItem("accessToken");
             await AsyncStorage.setItem("hosting", "false");
@@ -109,11 +104,6 @@ export default function Page() {
 
             console.error("Refresh error: ", error);
             // do login path
-            const userId = await getValue("userId");
-            const serverCode = await getValue("serverCode");
-
-            socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
-
             await AsyncStorage.removeItem("serverCode");
             await AsyncStorage.removeItem("accessToken");
             await AsyncStorage.setItem("hosting", "false");
@@ -433,7 +423,7 @@ export default function Page() {
 
 							<TextInput
 								style={styles.input}
-								placeholder="Enter Code"
+								placeholder="Join"
 								placeholderTextColor='white'
 								value={serverCode}
 								onChangeText={setServerCode}
