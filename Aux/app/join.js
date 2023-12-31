@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, StatusBar, Image, Keyboard, Text, View, TouchableOpacity, Alert, TextInput, ScrollView, TouchableWithoutFeedback, Dimensions, Linking } from "react-native";
+import { StyleSheet, StatusBar, Image, Keyboard, Text, View, TouchableOpacity, Alert, TextInput, ScrollView, TouchableWithoutFeedback, Dimensions, Linking, ActivityIndicator } from "react-native";
 import LinearGradient from 'react-native-linear-gradient';
 import Slider from '@react-native-community/slider';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -45,12 +45,8 @@ export default function Page() {
     const [isSearching, setSearching] = React.useState(false);
     const [showInfo, setShowInfo] = React.useState(false);
     const [currentSong, setCurrentSong] = React.useState({name: '', uri: '', image: '', artists: [], artistsURI: [], timestamp: 0});
-
+    const [connected, setConnected] = React.useState(false);
     const insets = useSafeAreaInsets();
-
-
-
-    
     const { height: deviceHeight, width: deviceWidth } = Dimensions.get('window');
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
@@ -142,7 +138,6 @@ export default function Page() {
         });
 
         newSocket.on('currentSongInfo', ({songInfo}) => {
-            // console.log(songInfo);
             setCurrentSong(songInfo);
         });
 
@@ -164,10 +159,8 @@ export default function Page() {
                 setSongList(null);
                 setSearchParam(null);
                 sendSongRequest();
-                // setSongVoted({ song: '', uri: '', artists: '' });
             }
         } else {
-            // setSongSelected({ song: '', uri: '', artists: '' });
             setVotingList([]);
             sendVotes();
         }
@@ -240,6 +233,7 @@ export default function Page() {
         const serverCode = await getValue("serverCode");
 
         if (userId === myUserId) {
+            setConnected(true);
             heartbeatInterval = setInterval(() => {sendHeartbeat(newSocket, serverCode)}, 60000);
         }
     };
@@ -252,6 +246,7 @@ export default function Page() {
 
         socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
 
+        setConnected(false);
         await AsyncStorage.removeItem("serverCode");
         await AsyncStorage.setItem("hosting", "false");
         await AsyncStorage.setItem("rejoining", "false");
@@ -263,6 +258,7 @@ export default function Page() {
     // removes any data associated with server
     // does not prompt for rejoin if this path is taken
     const hostLeft = async () => {
+        setConnected(false);
         await AsyncStorage.removeItem("serverCode");
         await AsyncStorage.setItem("hosting", "false");
         await AsyncStorage.setItem("rejoining", "false");
@@ -272,6 +268,7 @@ export default function Page() {
     // function is called if the server was full at join
     // removes any data associated with the server and does not prompt for rejoin
     const serverFull = async () => {
+        setConnected(false);
         await AsyncStorage.removeItem("serverCode");
         await AsyncStorage.setItem("hosting", "false");
         await AsyncStorage.setItem("rejoining", "false");
@@ -292,6 +289,7 @@ export default function Page() {
     // removes any data associated with server
     // does not prompt for rejoin
     const joinError = async () => {
+        setConnected(false);
         await AsyncStorage.removeItem("serverCode");
         await AsyncStorage.setItem("hosting", "false");
         await AsyncStorage.setItem("rejoining", "false");
@@ -459,7 +457,7 @@ export default function Page() {
 
         if (myUserId === userId) {
             // disconnect
-
+            setConnected(false);
             await AsyncStorage.removeItem("serverCode");
             await AsyncStorage.setItem("hosting", "false");
             await AsyncStorage.setItem("rejoining", "true");
@@ -489,7 +487,6 @@ export default function Page() {
 
         if (socket) {
             console.log("Sending request");
-            // setSongVoted({song: '', artists: '', uri: songSelected.uri});
             socket.emit("songRequest", { serverCode: serverCode, userId: userId, songInfo: songSelected});
         }
     };
@@ -497,9 +494,6 @@ export default function Page() {
     const sendVotes = async () => {
         const userId = await getValue("userId");
         const serverCode = await getValue("serverCode");
-
-        console.log("Voting: ", songVoted);
-        console.log("Voting: ", songSelected);
 
         if (socket) {
             console.log("Sending vote");
@@ -530,7 +524,6 @@ export default function Page() {
             flex: isSearching ? 1 : 0,
             flexDirection: 'column',
             alignItems: 'center',
-            // marginTop: 5
         },
         searchInput: {
             flex: 0,
@@ -604,7 +597,6 @@ export default function Page() {
             flexDirection: 'column',
             alignItems: 'center',
             marginTop: 15,
-            // marginBottom: 2
         },
         songName: {
             color: 'white',
@@ -676,9 +668,13 @@ export default function Page() {
             alignItems: 'center',
             justifyContent: 'center',
           },
-          voteInfo: {
+          voteInfoSong: {
             color: 'white',
             fontSize: 18,
+          },
+          voteInfoArtist: {
+            color: 'white',
+            fontSize: 15,
             marginBottom: 50,
           },
     });
@@ -693,7 +689,7 @@ export default function Page() {
     //  and a leave server button
     return (
         <LinearGradient
-            colors={['rgb(31, 31, 31)', 'rgb(31, 31, 31)']}
+            colors={['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={styles.container}
@@ -701,257 +697,279 @@ export default function Page() {
             <SafeAreaView style={styles.container}>
                 <StatusBar barStyle='light-content' />
 
-                <TouchableWithoutFeedback style={styles.container} onPress={() => {
-                    if (isSearching) {
-                        Keyboard.dismiss()
-                    }
-                }}>
-                    <>
-
-                        {!showInfo ? (
-                            <View style={styles.container}>
-                                {theServerCode && (
-                                    <>
-                                        <View style={styles.search}>
-                                            <View style={styles.searchInput}>
-                                                {isSearching && (
-                                                    <TouchableOpacity style={{ paddingLeft: insets.left, paddingRight: 10, width: '20%', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
-                                                        setSearching(false);
-                                                        setSearchParam(null);
-                                                        setSongList(null);
-                                                        Keyboard.dismiss();
-                                                    }}>
-                                                        <Ionicons name="arrow-back" size={40} color="#7D00D1" />
-                                                    </TouchableOpacity>
-                                                )}
-
-                                                {!isSearching && (
-                                                    <TouchableOpacity style={{ paddingLeft: insets.left, paddingRight: 10, width: '20%', justifyContent: 'center', alignItems: 'center' }} onPress={async () => await leaveServer()}>
-                                                        <MaterialIcons name="exit-to-app" size={40} color="#7D00D1" />
-                                                    </TouchableOpacity>
-                                                )}
-
-                                                {!votingPhase && (
-                                                    <TextInput
-                                                        style={styles.input}
-                                                        placeholder="Search for a song"
-                                                        placeholderTextColor={'white'}
-                                                        value={searchParam}
-                                                        onChangeText={setSearchParam}
-                                                        keyboardAppearance='dark'
-                                                        returnKeyType='search'
-                                                        onSubmitEditing={() => searchSong()}
-                                                        onFocus={() => setSearching(true)}
-                                                    />
-                                                )}
-                                                
-
-                                                
-                                            </View>
-
-                                            {!isSearching ? (
-                                                    <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, position: 'absolute', justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-end' }} onPress={async () => setShowInfo(true)}>
-                                                        <Ionicons name="information-circle-outline" size={40} color="#7D00D1" />
-                                                    </TouchableOpacity>
-                                                ) : (
-                                                    <TouchableOpacity style={{ paddingLeft: 10, paddingRight: insets.right, position: 'absolute', alignItems: 'flex-end', alignSelf: 'flex-end' }} onPress={async () => setShowInfo(true)}>
-                                                        <Ionicons name="information-circle-outline" size={40} color="#7D00D1" />
-                                                    </TouchableOpacity>
-                                            )}
-
-                                            <View style={styles.searchOutput}>
-                                                {isSearching && (
-                                                    <ScrollView style={styles.searchOutput}>
-                                                        {songList && songList.map(item => (
-                                                            <TouchableOpacity key={item.uri} style={{flexDirection: 'row', marginTop: 13}}>
-                                                                <TouchableOpacity style={{flexDirection: 'row', width: '90%'}} onPress={() => {
-                                                                        if (item.uri === songSelected.uri) {
-                                                                            setSongSelected({ name: '', uri: '', artists: '' });
-                                                                        } else {
-                                                                            setSongSelected(item); 
-                                                                        }
-                                                                    }}>
-                                                                    <View>
-                                                                        <Image style={{width: 55, height: 55}} source={{ uri: item.image }} />
-                                                                    </View>
-                                                                    <View style={styles.searchSongInfo}>
-                                                                        <Text style={{ fontSize: 18, color: "white", alignItems: 'flex-start' }}>{
-                                                                        item.name.length <= 25
-                                                                        ? item.name
-                                                                        : item.name.slice(0, 25) + '...'
-                                                                        }</Text>
-                                                                        <Text style={{ fontSize: 15, color: "white", alignItems: 'flex-start' }}>{
-                                                                            item.artist.length <= 2
-                                                                            ? item.artist.join(', ')
-                                                                            : item.artist.slice(0, 2).join(', ') + ', ...'
-                                                                        }</Text>
-                                                                    </View>
-                                                                </TouchableOpacity>
-                                                                
-                                                                { songSelected.uri === item.uri ? (
-                                                                    <Entypo style={{alignSelf: 'center', alignItems: 'center', justifyContent: 'center'}} name="check" size={24} color="#7D00D1" />
-                                                                ) : (
-                                                                    <Text></Text>
-                                                                )}
-
-                                                            </TouchableOpacity>
-                                                        ))}
-                                                    </ScrollView>
-                                                )}
-                                            </View>
-                                        </View>
-                                        <View>
-                                            {!votingPhase && !isSearching && (
-                                                <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 15, marginBottom: 5}}><Text style={{color: "#7D00D1", fontSize: 20}}>Your Song: </Text>{
-                                                    songSelected.name ? songSelected.name.length <= 15 ? songSelected.name : songSelected.name.slice(0, 15) + '...' : 'N/A'
-                                                    }</Text>
-                                            )}
-                                        </View>
-                                        
-                                        {/* <> */}
-                                            {!isSearching && !votingPhase && (
-                                                <View style={styles.serverInfo}>
+                { connected ? (
+                    <TouchableWithoutFeedback style={styles.container} onPress={() => {
+                        if (isSearching) {
+                            Keyboard.dismiss()
+                        }
+                    }}>
+                        <>
+                            {!showInfo ? (
+                                <View style={styles.container}>
+                                    {theServerCode && (
+                                        <>
+                                            <View style={styles.search}>
+                                                <View style={styles.searchInput}>
+                                                    {isSearching && (
+                                                        <TouchableOpacity style={{ paddingLeft: insets.left, paddingRight: 10, width: '20%', justifyContent: 'center', alignItems: 'center' }} onPress={() => {
+                                                            setSearching(false);
+                                                            setSearchParam(null);
+                                                            setSongList(null);
+                                                            Keyboard.dismiss();
+                                                        }}>
+                                                            <Ionicons name="arrow-back" size={40} color="#7D00D1" />
+                                                        </TouchableOpacity>
+                                                    )}
+    
+                                                    {!isSearching && (
+                                                        <TouchableOpacity style={{ paddingLeft: insets.left, paddingRight: 10, width: '20%', justifyContent: 'center', alignItems: 'center' }} onPress={async () => await leaveServer()}>
+                                                            <MaterialIcons name="exit-to-app" size={40} color="#7D00D1" />
+                                                        </TouchableOpacity>
+                                                    )}
+    
+                                                    {!votingPhase && (
+                                                        <TextInput
+                                                            style={styles.input}
+                                                            placeholder="Search for a song"
+                                                            placeholderTextColor={'white'}
+                                                            value={searchParam}
+                                                            onChangeText={setSearchParam}
+                                                            keyboardAppearance='dark'
+                                                            returnKeyType='search'
+                                                            onSubmitEditing={() => searchSong()}
+                                                            onFocus={() => setSearching(true)}
+                                                        />
+                                                    )}
                                                     
-                                                        <Text style={{fontWeight: 'bold', color: '#7D00D1', fontSize: 20, marginBottom: 5}}>{votingPhase ? 'Vote for a song!' : 'Search for a song!'}</Text>
-                                                        <Text style={{fontWeight: 'bold', color: 'white', fontSize: 17, marginBottom: 0}}>{countdown} Seconds</Text>
+    
+                                                    
                                                 </View>
-                                            )}
-                                            {!isSearching && votingPhase && (
-                                                <>
-                                                <View style={{marginTop: 5, position: 'absolute', justifyContent: 'center', alignSelf: 'center'}}>
-                                                        <Text style={{alignSelf: 'center', fontWeight: 'bold', color: '#7D00D1', fontSize: 20, marginBottom: 5}}>{votingPhase ? 'Vote for a song!' : 'Search for a song!'}</Text>
-                                                        <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 17, marginBottom: 0}}>{countdown} Seconds</Text>
-                                                        <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 20, marginBottom: 5, marginTop: 20}}><Text style={{color: "#7D00D1", fontSize: 20}}>Your Song: </Text>{
+    
+                                                {!isSearching ? (
+                                                        <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, position: 'absolute', justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-end' }} onPress={async () => setShowInfo(true)}>
+                                                            <Ionicons name="information-circle-outline" size={40} color="#7D00D1" />
+                                                        </TouchableOpacity>
+                                                    ) : (
+                                                        <TouchableOpacity style={{ paddingLeft: 10, paddingRight: insets.right, position: 'absolute', alignItems: 'flex-end', alignSelf: 'flex-end' }} onPress={async () => setShowInfo(true)}>
+                                                            <Ionicons name="information-circle-outline" size={40} color="#7D00D1" />
+                                                        </TouchableOpacity>
+                                                )}
+    
+                                                <View style={styles.searchOutput}>
+                                                    {isSearching && (
+                                                        <ScrollView showsVerticalScrollIndicator={false} style={styles.searchOutput}>
+                                                            {songList && songList.map(item => (
+                                                                <TouchableOpacity key={item.uri} style={{flexDirection: 'row', marginTop: 13}}>
+                                                                    <TouchableOpacity style={{flexDirection: 'row', width: '90%'}} onPress={() => {
+                                                                            if (item.uri === songSelected.uri) {
+                                                                                setSongSelected({ name: '', uri: '', artists: '' });
+                                                                            } else {
+                                                                                setSongSelected(item); 
+                                                                            }
+                                                                        }}>
+                                                                        <View>
+                                                                            <Image style={{width: 55, height: 55}} source={{ uri: item.image }} />
+                                                                        </View>
+                                                                        <View style={styles.searchSongInfo}>
+                                                                            <Text style={{ fontSize: 18, color: "white", alignItems: 'flex-start' }}>{
+                                                                            item.name.length <= 25
+                                                                            ? item.name
+                                                                            : item.name.slice(0, 25) + '...'
+                                                                            }</Text>
+                                                                            <Text style={{ fontSize: 15, color: "white", alignItems: 'flex-start' }}>{
+                                                                                item.artist.length <= 2
+                                                                                ? item.artist.join(', ')
+                                                                                : item.artist.slice(0, 2).join(', ') + ', ...'
+                                                                            }</Text>
+                                                                        </View>
+                                                                    </TouchableOpacity>
+                                                                    
+                                                                    { songSelected.uri === item.uri ? (
+                                                                        <Entypo style={{alignSelf: 'center', alignItems: 'center', justifyContent: 'center'}} name="check" size={24} color="#7D00D1" />
+                                                                    ) : (
+                                                                        <Text></Text>
+                                                                    )}
+    
+                                                                </TouchableOpacity>
+                                                            ))}
+                                                        </ScrollView>
+                                                    )}
+                                                </View>
+                                            </View>
+                                            <View>
+                                                {!votingPhase && !isSearching && (
+                                                    <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 15, marginBottom: 5}}><Text style={{color: "#7D00D1", fontSize: 20}}>Your Song: </Text>{
                                                         songSelected.name ? songSelected.name.length <= 15 ? songSelected.name : songSelected.name.slice(0, 15) + '...' : 'N/A'
                                                         }</Text>
-                                                </View>
-
-                                                <View style={{marginTop: 100, justifyContent: 'center', alignSelf: 'center'}}>
-                                                    {votingList && votingList.map((item, index) => (
-                                                        <>
-                                                        <Text key={index} style={styles.voteInfo}>
-                                                            {item.name.length < 15 ? item.name : item.name.slice(0, 15) + '...'}
-                                                        </Text>
-
-                                                        <Text key={index} style={styles.voteInfo}>
-                                                            {item.name.length < 15 ? item.name : item.name.slice(0, 15) + '...'}
-                                                        </Text>
-
-                                                        <Text key={index} style={styles.voteInfo}>
-                                                        {item.name.length < 15 ? item.name : item.name.slice(0, 15) + '...'}
-                                                        </Text>
-
-                                                        <Text key={index} style={styles.voteInfo}>
-                                                                {item.name}
-                                                        </Text>
-
-                                                        <Text key={index} style={styles.voteInfo}>
-                                                        {item.name.length < 15 ? item.name : item.name.slice(0, 15) + '...'}
-                                                        </Text>
-                                                        </>
-                                                    ))}
-                                                </View>
-                                                </>
-                                            )}
-                                        {/* </> */}
-
-
-                                        <View style={styles.song}>
-                                            {!isSearching && !votingPhase && (
-                                                <>
-                                                    {currentSong.uri !== '' ? (
-                                                        <>
-                                                            <TouchableWithoutFeedback onPress={() => Linking.openURL(currentSong.uri)}>
-                                                                <Image source={{ uri: currentSong.image }} style={styles.image}></Image>
-                                                            </TouchableWithoutFeedback>
-
-                                                            <View style={styles.songInfo}>
+                                                )}
+                                            </View>
+                                            
+                                                {!isSearching && !votingPhase && (
+                                                    <View style={styles.serverInfo}>
+                                                        
+                                                            <Text style={{fontWeight: 'bold', color: '#7D00D1', fontSize: 20, marginBottom: 5}}>{votingPhase ? 'Vote for a song!' : 'Search for a song!'}</Text>
+                                                            <Text style={{fontWeight: 'bold', color: 'white', fontSize: 17, marginBottom: 0}}>{countdown} Seconds</Text>
+                                                    </View>
+                                                )}
+                                                {!isSearching && votingPhase && (
+                                                    <>
+                                                    <View style={{marginTop: 5, position: 'absolute', justifyContent: 'center', alignSelf: 'center'}}>
+                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: '#7D00D1', fontSize: 20, marginBottom: 5}}>{votingPhase ? 'Vote for a song!' : 'Search for a song!'}</Text>
+                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 17, marginBottom: 0}}>{countdown} Seconds</Text>
+                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 20, marginBottom: 5, marginTop: 20}}><Text style={{color: "#7D00D1", fontSize: 20}}>Your Song: </Text>{
+                                                            songSelected.name ? songSelected.name.length <= 15 ? songSelected.name : songSelected.name.slice(0, 15) + '...' : 'N/A'
+                                                            }</Text>
+                                                    </View>
+    
+                                                    <View style={{marginTop: 100, justifyContent: 'center', alignSelf: 'center', width: '100%', paddingHorizontal: 5}}>
+                                                        {votingList && votingList.map((item, index) => (
+                                                            <>
+                                                                {item.uri !== songSelected.uri && (
+                                                                    <TouchableOpacity style={{flexDirection: 'row', width: '100%', paddingHorizontal: 5}}>
+                                                                        <TouchableOpacity key={index} style={{flexDirection: 'row', width: '90%'}} onPress={() => {
+                                                                            if (item.uri === songVoted.uri) {
+                                                                                setSongVoted({ name: '', uri: '', artists: '' });
+                                                                            } else {
+                                                                                setSongVoted(item); 
+                                                                            }
+                                                                        }}>
+                                                                            <View>
+                                                                                <Image style={{width: 55, height: 55}} source={{ uri: item.image }} />
+                                                                            </View>
+                                                                            <View style={styles.searchSongInfo}>
+                                                                                <Text style={{ fontSize: 18, color: "white", alignItems: 'flex-start' }}>{
+                                                                                item.name.length <= 25
+                                                                                ? item.name
+                                                                                : item.name.slice(0, 25) + '...'
+                                                                                }</Text>
+                                                                                <Text style={{ fontSize: 15, color: "white", alignItems: 'flex-start' }}>{
+                                                                                    item.artist.length <= 2
+                                                                                    ? item.artist.join(', ')
+                                                                                    : item.artist.slice(0, 2).join(', ') + ', ...'
+                                                                                }</Text>
+                                                                            </View>
+                                                                        </TouchableOpacity>
+                                                                        { songVoted.uri === item.uri ? (
+                                                                            <Entypo style={{alignSelf: 'center', alignItems: 'center', justifyContent: 'center'}} name="check" size={24} color="#7D00D1" />
+                                                                        ) : (
+                                                                            <Text></Text>
+                                                                        )}
+                                                                    </TouchableOpacity>
+                                                                )}
+                                                            </>
+                                                        ))}
+                                                    </View>
+                                                    </>
+                                                )}
+    
+    
+                                            <View style={styles.song}>
+                                                {!isSearching && !votingPhase && (
+                                                    <>
+                                                        {currentSong.uri !== '' ? (
+                                                            <>
                                                                 <TouchableWithoutFeedback onPress={() => Linking.openURL(currentSong.uri)}>
-                                                                    <Text style={styles.songName}>{
-                                                                    currentSong.name.length <= 40
-                                                                    ? currentSong.name
-                                                                    : currentSong.name.slice(0, 40) + '...'
-                                                                    }</Text>
+                                                                    <Image source={{ uri: currentSong.image }} style={styles.image}></Image>
                                                                 </TouchableWithoutFeedback>
-
-                                                                <TouchableWithoutFeedback onPress={() => Linking.openURL(currentSong.artistsURI[0])}>
-                                                                    <Text style={styles.artist}>{
-                                                                    currentSong.artists.length <= 3
-                                                                    ? currentSong.artists.join(", ")
-                                                                    : currentSong.artists.slice(0, 3).join(', ') + ', ...'}</Text>
-                                                                </TouchableWithoutFeedback>
-                                                                
-                                                                <View style={{ alignItems: 'center', flexDirection: 'row', transform: [{scaleX: 0.4}, {scaleY: 0.4}]}}>
-                                                                    <TimeDisplay style={{color: 'white', fontSize: 30, fontWeight: '500', paddingHorizontal: 10}} milliseconds={currentSong.timestamp}/>
-                                                                    <Slider
-                                                                        style={{ margin: 0, padding: 0, width: 725, height: 50}}
-                                                                        minimumValue={0}
-                                                                        maximumValue={currentSong.duration}
-                                                                        value={currentSong.timestamp}
-                                                                        minimumTrackTintColor="#FFFFFF"
-                                                                        maximumTrackTintColor="#5E5E5E"
-                                                                        step={1}
-                                                                        disabled={true}
-                                                                        
-                                                                    />
-                                                                    <TimeDisplay style={{color: 'white', fontSize: 30, fontWeight: '500', paddingHorizontal: 10}} milliseconds={currentSong.duration}/>
+    
+                                                                <View style={styles.songInfo}>
+                                                                    <TouchableWithoutFeedback onPress={() => Linking.openURL(currentSong.uri)}>
+                                                                        <Text style={styles.songName}>{
+                                                                        currentSong.name.length <= 40
+                                                                        ? currentSong.name
+                                                                        : currentSong.name.slice(0, 40) + '...'
+                                                                        }</Text>
+                                                                    </TouchableWithoutFeedback>
+    
+                                                                    <TouchableWithoutFeedback onPress={() => Linking.openURL(currentSong.artistsURI[0])}>
+                                                                        <Text style={styles.artist}>{
+                                                                        currentSong.artists.length <= 3
+                                                                        ? currentSong.artists.join(", ")
+                                                                        : currentSong.artists.slice(0, 3).join(', ') + ', ...'}</Text>
+                                                                    </TouchableWithoutFeedback>
+                                                                    
+                                                                    <View style={{ alignItems: 'center', flexDirection: 'row', transform: [{scaleX: 0.4}, {scaleY: 0.4}]}}>
+                                                                        <TimeDisplay style={{color: 'white', fontSize: 30, fontWeight: '500', paddingHorizontal: 10}} milliseconds={currentSong.timestamp}/>
+                                                                        <Slider
+                                                                            style={{ margin: 0, padding: 0, width: 725, height: 50}}
+                                                                            minimumValue={0}
+                                                                            maximumValue={currentSong.duration}
+                                                                            value={currentSong.timestamp}
+                                                                            minimumTrackTintColor="#FFFFFF"
+                                                                            maximumTrackTintColor="#5E5E5E"
+                                                                            step={1}
+                                                                            disabled={true}
+                                                                            
+                                                                        />
+                                                                        <TimeDisplay style={{color: 'white', fontSize: 30, fontWeight: '500', paddingHorizontal: 10}} milliseconds={currentSong.duration}/>
+                                                                    </View>
                                                                 </View>
-                                                            </View>
-                                                        </>
-                                                    ) : (
-
-                                                        <>
-                                                            <TouchableWithoutFeedback onPress={() => Linking.openURL("spotify://")}>
-                                                                <Image source={require('../images/spotify-icon.png')} style={styles.image} />
-                                                            </TouchableWithoutFeedback>
-
-                                                            <View style={styles.songInfo}>
-                                                                <Text style={styles.songName}>Spotify not Playing</Text>
-                                                                <Text style={styles.artist}>Please Tell Host to Play Spotify</Text>
-                                                            </View>
-                                                        </>
-
-                                                    )}
-
-                                                </>
-                                            )}
-                                        </View>
-                                    </>
-                                )}
-                            </View>
-                        ) : (
-                            <View style={styles.container}>
-
-                                <TouchableOpacity
-                                    style={{ position: 'absolute', paddingLeft: 10, paddingRight: 10, left: 0, justifyContent: 'center', alignItems: 'center' }}
-                                    onPress={() => setShowInfo(false)}>
-                                    <Ionicons name="arrow-back" size={40} color="#7D00D1" />
-                                </TouchableOpacity>
-
-                                <Text style={styles.infoHeader}>Server Info</Text>
-
-                                <View style={styles.serverInfo}>
-                                    <Text style={styles.serverCode}><Text style={{color: "#7D00D1", fontSize: 28}}>Code: </Text>{theServerCode}</Text>
-
-                                    <Text style={styles.hostLabel}>Host:</Text>
-
-                                    {listUsers.host && (
-                                        <Text style={styles.users}>{listUsers.host.username}</Text>
+                                                            </>
+                                                        ) : (
+    
+                                                            <>
+                                                                <TouchableWithoutFeedback onPress={() => Linking.openURL("spotify://")}>
+                                                                    <Image source={require('../images/spotify-icon.png')} style={styles.image} />
+                                                                </TouchableWithoutFeedback>
+    
+                                                                <View style={styles.songInfo}>
+                                                                    <Text style={styles.songName}>Spotify not Playing</Text>
+                                                                    <Text style={styles.artist}>Please Tell Host to Play Spotify</Text>
+                                                                </View>
+                                                            </>
+    
+                                                        )}
+    
+                                                    </>
+                                                )}
+                                            </View>
+                                        </>
                                     )}
-
-                                    <Text style={styles.membersLabel}>Members: </Text>
-                                    {listUsers.users && listUsers.users.map((user, index) => (
-                                        <Text style={styles.users} key={index}>{user.username}</Text>
-                                    ))}
                                 </View>
-                            </View>
-                        )}
-                    
-                    </>
-                </TouchableWithoutFeedback>
+                            ) : (
+                                <View style={styles.container}>
+    
+                                    <TouchableOpacity
+                                        style={{ position: 'absolute', paddingLeft: 10, paddingRight: 10, left: 0, justifyContent: 'center', alignItems: 'center' }}
+                                        onPress={() => setShowInfo(false)}>
+                                        <Ionicons name="arrow-back" size={40} color="#7D00D1" />
+                                    </TouchableOpacity>
+    
+                                    <Text style={styles.infoHeader}>Server Info</Text>
+    
+                                    <View style={styles.serverInfo}>
+                                        <Text style={styles.serverCode}><Text style={{color: "#7D00D1", fontSize: 28}}>Code: </Text>{theServerCode}</Text>
+    
+                                        <Text style={styles.hostLabel}>Host:</Text>
+    
+                                        {listUsers.host && (
+                                            <Text style={styles.users}>{listUsers.host.username}</Text>
+                                        )}
+    
+                                        <Text style={styles.membersLabel}>Members: </Text>
+                                        {listUsers.users && listUsers.users.map((user, index) => (
+                                            <Text style={styles.users} key={index}>{user.username}</Text>
+                                        ))}
+                                    </View>
+                                </View>
+                            )}
+                        
+                        </>
+                    </TouchableWithoutFeedback>
+                ) : (
+                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                        <ActivityIndicator
+                            animating={true}
+                            size='large'
+                            color="#7D00D1" // Set the color of the spinner
+                        />
+                    </View>
+                )}
+
+                
             </SafeAreaView>
         </LinearGradient>
         
     );
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////////////////////
 }

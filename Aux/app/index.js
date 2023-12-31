@@ -3,7 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, exchangeCodeAsync, refreshAsync } from 'expo-auth-session';
 import pkceChallenge from 'react-native-pkce-challenge';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StyleSheet, Text, TouchableOpacity, View, Image } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View, Image, ActivityIndicator } from "react-native";
 import LinearGradient from 'react-native-linear-gradient';
 import { router } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -17,6 +17,7 @@ export default function Page() {
     // variables
 
     const [login, setLogin] = React.useState(true);
+    const [loading, setLoading] = React.useState(true);
     const authorizationEndpoint = 'https://accounts.spotify.com/authorize';
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
     const clientId = '43d48850732744018aff88a5692d03d5';
@@ -48,13 +49,14 @@ export default function Page() {
                 // else refresh the access token
                 if (currentTime < expirationTime) {
                     setLogin(false);
-                    router.replace('/home');
+                    setTimeout(() => {router.replace('/home')}, 1000);
                 } else {
                     setLogin(false);
                     refreshAccessToken();
                 }
             } else {
                 setLogin(true);
+                setLoading(false);
             }
         };
 
@@ -99,6 +101,7 @@ export default function Page() {
 
     // requesting the exchange token to get access token from spotify using the expo OAuth functions
     const exchangeCode = async () => {
+        setLoading(true);
 
         try {
             const tokenResponse = await exchangeCodeAsync(
@@ -126,6 +129,7 @@ export default function Page() {
 
         } catch (error) {
             setLogin(true);
+            setLoading(false);
             console.error("Token exchange error: ", error);
         }
     };
@@ -162,6 +166,7 @@ export default function Page() {
 
         } catch (error) {
             setLogin(true);
+            setLoading(false);
             console.error("Refresh error: ", error);
         }
 
@@ -183,13 +188,14 @@ export default function Page() {
             if (currentTime < expirationTime) {
                 setLogin(false);
                 // apiCall();
-                router.replace('/home');
+                setTimeout(() => {router.replace('/home')}, 1000);
             } else {
                 setLogin(false);
                 await refreshAccessToken();
             }
         } else {
             setLogin(true);
+            setLoading(false);
         }
     };
     /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -245,19 +251,33 @@ export default function Page() {
     // if user clicks log in it starts the async log in functions from expo's OAuth
     return (
         <LinearGradient
-			colors={['rgb(31, 31, 31)', 'rgb(31, 31, 31)']}
+			colors={['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
 			start={{ x: 0, y: 0 }}
 			end={{ x: 0, y: 1 }}
 			style={styles.container}
 		>
-            <SafeAreaView style={styles.container}>
+
+            { !loading ? (
+                <SafeAreaView style={styles.container}>
                 <View style={styles.container}>
+                    <View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center', top: '20%' }}>
+                        <Text style={{color: 'white', fontSize: 50}}>SHOW LOGO</Text>
+                    </View>
                     <TouchableOpacity style={styles.button} disabled={!request} onPress={() => { promptAsync() }}>
-                        {/* <Text style={styles.button}>Login</Text> */}
-                        <Image style={styles.logo} source={require("../images/spotify-logo.png")}/>
+                        <View style={{flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
+                            <Image style={styles.logo} source={require("../images/spotify-icon-black.png")}/>
+                            <Text style={styles.text} >Login with Spotify</Text>
+                        </View>
+                        {/* <Image style={styles.logo} source={require("../images/spotify-logo.png")}/> */}
                     </TouchableOpacity>
                 </View>
-            </SafeAreaView>
+                </SafeAreaView>
+            ) : (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{color: 'white', fontSize: 50}}>SHOW LOGO</Text>
+                </View>
+            )}
+            
 
         </LinearGradient>
         
@@ -276,14 +296,20 @@ const styles = StyleSheet.create({
         alignItems: "center",
     },
     button: {
-
-        backgroundColor: 'black',
-        borderRadius: 50,
-        borderWidth: 5,
+        backgroundColor: '#1DB954',
+        borderRadius: 100,
+        paddingHorizontal: 10,
+        paddingVertical: 7
+    },
+    text: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#191414',
+        paddingLeft: 5
     },
     logo: {
-        width: 250,
-        height: 75
+        width: 35,
+        height: 35,
     }
 });
 /////////////////////////////////////////////////////////////////////////////////////////////////

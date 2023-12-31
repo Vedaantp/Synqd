@@ -383,15 +383,20 @@ export default function Page() {
 	// displays the Host button, Server Code text box, Join Button, and Logout button
 	return (
 		<LinearGradient
-			colors={['rgb(31, 31, 31)', 'rgb(31, 31, 31)']}
+			colors={['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
 			start={{ x: 0, y: 0 }}
 			end={{ x: 0, y: 1 }}
 			style={styles.container}
 		>
 			<SafeAreaView style={styles.container}>
 				<StatusBar barStyle='light-content' />
-				<TouchableWithoutFeedback style={styles.container} onPress={() => {Keyboard.dismiss()}}>
+				<TouchableWithoutFeedback style={styles.container} onPress={() => {Keyboard.dismiss();}}>
 					<View style={styles.container}>
+
+						<View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center', top: '20%' }}>
+							<Text style={{color: 'white', fontSize: 50}}>SHOW LOGO</Text>
+						</View>
+
 						<View style={styles.routeButtons}>
 							{ accountStatus ? (
 								<TouchableOpacity onPress={async () => {
@@ -466,6 +471,7 @@ const styles = StyleSheet.create({
 		flex: 1,
 		justifyContent: 'center',
 		alignItems: "center",
+		top: '5%'
 	},
 	hostButton: {
 		color: "#7D00D1",
@@ -498,7 +504,7 @@ const styles = StyleSheet.create({
 	input: {
 		flex: 0,
 		height: 50,
-		width: 175,
+		width: 150,
 		fontSize: 25,
 		borderColor: '#7D00D1',
 		borderRadius: 25,

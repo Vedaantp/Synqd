@@ -7,6 +7,7 @@ export default () => {
       <Stack
       screenOptions={{
           headerShown: false,
+          animation: 'fade'
       }}
       />
     </SafeAreaProvider>

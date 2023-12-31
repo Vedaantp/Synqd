@@ -267,6 +267,7 @@ export default function Page() {
     // if the host was not able to join it will remove any data associated with the server
     // will not allow for rejoin
     const joinError = async () => {
+        setConnected(false);
         await AsyncStorage.removeItem("serverCode");
         await AsyncStorage.setItem("rejoining", 'false');
 
@@ -885,7 +886,7 @@ export default function Page() {
     // songs from search
     return (
         <LinearGradient
-            colors={['rgb(31, 31, 31)', 'rgb(31, 31, 31)']}
+            colors={['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={styles.container}
@@ -951,7 +952,7 @@ export default function Page() {
 
                                                 <View style={styles.searchOutput}>
                                                     {isSearching && (
-                                                        <ScrollView style={styles.searchOutput}>
+                                                        <ScrollView showsVerticalScrollIndicator={false} style={styles.searchOutput}>
                                                             {songList && songList.map(item => (
                                                                 <TouchableOpacity key={item.uri} style={{ flexDirection: 'row', marginTop: 13 }}>
                                                                     <TouchableOpacity style={{ flexDirection: 'row', width: '90%' }} onPress={async () => await handlePlaySong(item.uri)}>
@@ -973,7 +974,6 @@ export default function Page() {
                                                                     </TouchableOpacity>
 
                                                                     <TouchableOpacity style={{ paddingRight: 10, fontSize: 25, justifyContent: 'center', alignItems: 'center' }} onPress={async () => { setSongSelected({ song: item.name, uri: item.uri, artists: item.artist }); await showQueue(); await handleAddQueue(item.uri); }}>
-                                                                        {/* <Text style={{color: "#7D00D1"}}>Queue</Text> */}
                                                                         <MaterialIcons name="queue-music" size={40} color="#7D00D1" />
                                                                     </TouchableOpacity>
                                                                 </TouchableOpacity>
