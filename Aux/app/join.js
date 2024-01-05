@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { StyleSheet, StatusBar, Image, Keyboard, Text, View, TouchableOpacity, Alert, TextInput, ScrollView, TouchableWithoutFeedback, Dimensions, Linking, ActivityIndicator } from "react-native";
+import { StyleSheet, StatusBar, useColorScheme, Image, Keyboard, Text, View, TouchableOpacity, Alert, TextInput, ScrollView, TouchableWithoutFeedback, Dimensions, Linking, ActivityIndicator } from "react-native";
 import LinearGradient from 'react-native-linear-gradient';
 import Slider from '@react-native-community/slider';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -47,6 +47,7 @@ export default function Page() {
     const [currentSong, setCurrentSong] = React.useState({name: '', uri: '', image: '', artists: [], artistsURI: [], timestamp: 0});
     const [connected, setConnected] = React.useState(false);
     const insets = useSafeAreaInsets();
+	const theme = useColorScheme();
     const { height: deviceHeight, width: deviceWidth } = Dimensions.get('window');
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
@@ -509,6 +510,7 @@ export default function Page() {
     };
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
+
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // styles
     const styles = StyleSheet.create({
@@ -543,7 +545,7 @@ export default function Page() {
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'flex-start',
-            paddingLeft: 10
+            paddingLeft: 10,
         },
         backButton: {
             flex: 0,
@@ -565,7 +567,7 @@ export default function Page() {
             borderColor: '#7D00D1',
             borderRadius: 25,
             borderWidth: 1,
-            color: 'white',
+            color: theme === 'light' ? 'black' : 'white',
             justifyContent: 'center',
             alignContent: 'center'
         },
@@ -578,13 +580,13 @@ export default function Page() {
         songSelected: {
             fontWeight: 'bold',
             fontSize: 20,
-            color: "white",
+            color: theme === 'light' ? 'black' : 'white',
             marginBottom: 30
         },
         serverCode: {
             fontWeight: 'bold',
             fontSize: 23,
-            color: "white",
+            color: theme === 'light' ? 'black' : 'white',
             marginBottom: 30,
         },
         song: {
@@ -599,12 +601,12 @@ export default function Page() {
             marginTop: 15,
         },
         songName: {
-            color: 'white',
+            color: theme === 'light' ? 'black' : 'white',
             fontSize: 17,
             fontWeight: 'bold'
         },
         artist: {
-            color: 'white',
+            color: theme === 'light' ? 'black' : 'white',
             fontSize: 13,
             fontWeight: 'bold'
         },
@@ -649,7 +651,7 @@ export default function Page() {
             marginBottom: 5
         },
         users: {
-            color: "white",
+            color: theme === 'light' ? 'black' : 'white',
             fontSize: 18
         },
         alertContainer: {
@@ -669,11 +671,11 @@ export default function Page() {
             justifyContent: 'center',
           },
           voteInfoSong: {
-            color: 'white',
+            color: theme === 'light' ? 'black' : 'white',
             fontSize: 18,
           },
           voteInfoArtist: {
-            color: 'white',
+            color: theme === 'light' ? 'black' : 'white',
             fontSize: 15,
             marginBottom: 50,
           },
@@ -689,13 +691,13 @@ export default function Page() {
     //  and a leave server button
     return (
         <LinearGradient
-            colors={['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
+            colors={theme === 'light' ? ['#FFFFFF', '#FFFFFF'] : ['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
             start={{ x: 0, y: 0 }}
             end={{ x: 0, y: 1 }}
             style={styles.container}
         >
             <SafeAreaView style={styles.container}>
-                <StatusBar barStyle='light-content' />
+                <StatusBar />
 
                 { connected ? (
                     <TouchableWithoutFeedback style={styles.container} onPress={() => {
@@ -731,10 +733,10 @@ export default function Page() {
                                                         <TextInput
                                                             style={styles.input}
                                                             placeholder="Search for a song"
-                                                            placeholderTextColor={'white'}
+                                                            placeholderTextColor={theme === 'light' ? 'black' : 'white'}
                                                             value={searchParam}
                                                             onChangeText={setSearchParam}
-                                                            keyboardAppearance='dark'
+                                                            keyboardAppearance={theme}
                                                             returnKeyType='search'
                                                             onSubmitEditing={() => searchSong()}
                                                             onFocus={() => setSearching(true)}
@@ -747,11 +749,11 @@ export default function Page() {
     
                                                 {!isSearching ? (
                                                         <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, position: 'absolute', justifyContent: 'center', alignItems: 'center', alignSelf: 'flex-end' }} onPress={async () => setShowInfo(true)}>
-                                                            <Ionicons name="information-circle-outline" size={40} color="#7D00D1" />
+                                                            <Ionicons name="people" size={40} color="#7D00D1" />
                                                         </TouchableOpacity>
                                                     ) : (
-                                                        <TouchableOpacity style={{ paddingLeft: 10, paddingRight: insets.right, position: 'absolute', alignItems: 'flex-end', alignSelf: 'flex-end' }} onPress={async () => setShowInfo(true)}>
-                                                            <Ionicons name="information-circle-outline" size={40} color="#7D00D1" />
+                                                        <TouchableOpacity style={{ paddingLeft: 10, paddingRight: 10, position: 'absolute', alignItems: 'flex-end', alignSelf: 'flex-end' }} onPress={async () => setShowInfo(true)}>
+                                                            <Ionicons name="people" size={40} color="#7D00D1" />
                                                         </TouchableOpacity>
                                                 )}
     
@@ -759,36 +761,29 @@ export default function Page() {
                                                     {isSearching && (
                                                         <ScrollView showsVerticalScrollIndicator={false} style={styles.searchOutput}>
                                                             {songList && songList.map(item => (
-                                                                <TouchableOpacity key={item.uri} style={{flexDirection: 'row', marginTop: 13}}>
-                                                                    <TouchableOpacity style={{flexDirection: 'row', width: '90%'}} onPress={() => {
-                                                                            if (item.uri === songSelected.uri) {
-                                                                                setSongSelected({ name: '', uri: '', artists: '' });
-                                                                            } else {
-                                                                                setSongSelected(item); 
-                                                                            }
-                                                                        }}>
+                                                                <TouchableOpacity key={item.uri} style={{ width: '100%', flexDirection: 'row', padding: 10, borderRadius: 10, backgroundColor: item.uri === songSelected.uri ? '#7D00D1' : (theme === 'light' ? '#FFFFFF' : '#191414')}} onPress={() => {
+                                                                    if (item.uri === songSelected.uri) {
+                                                                        setSongSelected({ name: '', uri: '', artists: '' });
+                                                                    } else {
+                                                                        setSongSelected(item); 
+                                                                    }
+                                                                }}>
+                                                                    {/* <TouchableOpacity style={{flexDirection: 'row',}} > */}
                                                                         <View>
                                                                             <Image style={{width: 55, height: 55}} source={{ uri: item.image }} />
                                                                         </View>
                                                                         <View style={styles.searchSongInfo}>
-                                                                            <Text style={{ fontSize: 18, color: "white", alignItems: 'flex-start' }}>{
+                                                                            <Text style={{ fontSize: 18, color: (theme === 'light' && item.uri !== songSelected.uri) ? 'black' : 'white', alignItems: 'flex-start' }}>{
                                                                             item.name.length <= 25
                                                                             ? item.name
                                                                             : item.name.slice(0, 25) + '...'
                                                                             }</Text>
-                                                                            <Text style={{ fontSize: 15, color: "white", alignItems: 'flex-start' }}>{
+                                                                            <Text style={{ fontSize: 15, color: (theme === 'light' && item.uri !== songSelected.uri) ? 'black' : 'white', alignItems: 'flex-start' }}>{
                                                                                 item.artist.length <= 2
                                                                                 ? item.artist.join(', ')
                                                                                 : item.artist.slice(0, 2).join(', ') + ', ...'
                                                                             }</Text>
                                                                         </View>
-                                                                    </TouchableOpacity>
-                                                                    
-                                                                    { songSelected.uri === item.uri ? (
-                                                                        <Entypo style={{alignSelf: 'center', alignItems: 'center', justifyContent: 'center'}} name="check" size={24} color="#7D00D1" />
-                                                                    ) : (
-                                                                        <Text></Text>
-                                                                    )}
     
                                                                 </TouchableOpacity>
                                                             ))}
@@ -798,7 +793,7 @@ export default function Page() {
                                             </View>
                                             <View>
                                                 {!votingPhase && !isSearching && (
-                                                    <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 15, marginBottom: 5}}><Text style={{color: "#7D00D1", fontSize: 20}}>Your Song: </Text>{
+                                                    <Text style={{alignSelf: 'center', fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white', fontSize: 15, marginBottom: 5}}><Text style={{color: "#7D00D1", fontSize: 20}}>Your Song: </Text>{
                                                         songSelected.name ? songSelected.name.length <= 15 ? songSelected.name : songSelected.name.slice(0, 15) + '...' : 'N/A'
                                                         }</Text>
                                                 )}
@@ -806,17 +801,15 @@ export default function Page() {
                                             
                                                 {!isSearching && !votingPhase && (
                                                     <View style={styles.serverInfo}>
-                                                        
-                                                            <Text style={{fontWeight: 'bold', color: '#7D00D1', fontSize: 20, marginBottom: 5}}>{votingPhase ? 'Vote for a song!' : 'Search for a song!'}</Text>
-                                                            <Text style={{fontWeight: 'bold', color: 'white', fontSize: 17, marginBottom: 0}}>{countdown} Seconds</Text>
+                                                            <Text style={{fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white', fontSize: 17, marginBottom: 0}}>{countdown} Seconds</Text>
                                                     </View>
                                                 )}
                                                 {!isSearching && votingPhase && (
                                                     <>
                                                     <View style={{marginTop: 5, position: 'absolute', justifyContent: 'center', alignSelf: 'center'}}>
-                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: '#7D00D1', fontSize: 20, marginBottom: 5}}>{votingPhase ? 'Vote for a song!' : 'Search for a song!'}</Text>
-                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 17, marginBottom: 0}}>{countdown} Seconds</Text>
-                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: 'white', fontSize: 20, marginBottom: 5, marginTop: 20}}><Text style={{color: "#7D00D1", fontSize: 20}}>Your Song: </Text>{
+                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: '#7D00D1', fontSize: 20, marginBottom: 5}}>Vote for a song!</Text>
+                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white', fontSize: 17, marginBottom: 0}}>{countdown} Seconds</Text>
+                                                            <Text style={{alignSelf: 'center', fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white', fontSize: 20, marginBottom: 5, marginTop: 20}}><Text style={{color: "#7D00D1", fontSize: 20}}>Your Song: </Text>{
                                                             songSelected.name ? songSelected.name.length <= 15 ? songSelected.name : songSelected.name.slice(0, 15) + '...' : 'N/A'
                                                             }</Text>
                                                     </View>
@@ -837,23 +830,18 @@ export default function Page() {
                                                                                 <Image style={{width: 55, height: 55}} source={{ uri: item.image }} />
                                                                             </View>
                                                                             <View style={styles.searchSongInfo}>
-                                                                                <Text style={{ fontSize: 18, color: "white", alignItems: 'flex-start' }}>{
+                                                                                <Text style={{ fontSize: 18, color: (theme === 'light' && item.uri !== songVoted.uri) ? 'black' : 'white', alignItems: 'flex-start' }}>{
                                                                                 item.name.length <= 25
                                                                                 ? item.name
                                                                                 : item.name.slice(0, 25) + '...'
                                                                                 }</Text>
-                                                                                <Text style={{ fontSize: 15, color: "white", alignItems: 'flex-start' }}>{
+                                                                                <Text style={{ fontSize: 15, color: (theme === 'light' && item.uri !== songVoted.uri) ? 'black' : 'white', alignItems: 'flex-start' }}>{
                                                                                     item.artist.length <= 2
                                                                                     ? item.artist.join(', ')
                                                                                     : item.artist.slice(0, 2).join(', ') + ', ...'
                                                                                 }</Text>
                                                                             </View>
                                                                         </TouchableOpacity>
-                                                                        { songVoted.uri === item.uri ? (
-                                                                            <Entypo style={{alignSelf: 'center', alignItems: 'center', justifyContent: 'center'}} name="check" size={24} color="#7D00D1" />
-                                                                        ) : (
-                                                                            <Text></Text>
-                                                                        )}
                                                                     </TouchableOpacity>
                                                                 )}
                                                             </>
@@ -889,19 +877,20 @@ export default function Page() {
                                                                     </TouchableWithoutFeedback>
                                                                     
                                                                     <View style={{ alignItems: 'center', flexDirection: 'row', transform: [{scaleX: 0.4}, {scaleY: 0.4}]}}>
-                                                                        <TimeDisplay style={{color: 'white', fontSize: 30, fontWeight: '500', paddingHorizontal: 10}} milliseconds={currentSong.timestamp}/>
+                                                                        <TimeDisplay style={{color: theme === 'light' ? 'black' : 'white', fontSize: 30, fontWeight: '500', paddingHorizontal: 10}} milliseconds={currentSong.timestamp}/>
                                                                         <Slider
                                                                             style={{ margin: 0, padding: 0, width: 725, height: 50}}
                                                                             minimumValue={0}
                                                                             maximumValue={currentSong.duration}
                                                                             value={currentSong.timestamp}
-                                                                            minimumTrackTintColor="#FFFFFF"
-                                                                            maximumTrackTintColor="#5E5E5E"
+                                                                            minimumTrackTintColor={theme === 'light' ? '#000000' : '#FFFFFF'}
+                                                                            maximumTrackTintColor={theme === 'light' ? '#A1A1A1' : "#5E5E5E"}
+                                                                            thumbTintColor={theme === 'light' ? 'black' : "white"}
                                                                             step={1}
                                                                             disabled={true}
                                                                             
                                                                         />
-                                                                        <TimeDisplay style={{color: 'white', fontSize: 30, fontWeight: '500', paddingHorizontal: 10}} milliseconds={currentSong.duration}/>
+                                                                        <TimeDisplay style={{color: theme === 'light' ? 'black' : 'white', fontSize: 30, fontWeight: '500', paddingHorizontal: 10}} milliseconds={currentSong.duration}/>
                                                                     </View>
                                                                 </View>
                                                             </>

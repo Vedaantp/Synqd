@@ -1,159 +1,175 @@
 import * as React from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Pressable, Image, TextInput, Alert, StatusBar, TouchableWithoutFeedback, Keyboard } from "react-native";
+import { Modal, StyleSheet, Text, TouchableOpacity, View, Pressable, Image, TextInput, Alert, StatusBar, TouchableWithoutFeedback, Keyboard, useColorScheme } from "react-native";
 import { refreshAsync } from 'expo-auth-session';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { MaterialIcons } from '@expo/vector-icons';
 import LinearGradient from 'react-native-linear-gradient';
 import { router } from 'expo-router';
 import io from 'socket.io-client';
+import { BarCodeScanner } from 'expo-barcode-scanner';
+
+
+import Test from './test';
+import Divider from './divider';
 
 export default function Page() {
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// variables
 
 	const [serverCode, setServerCode] = React.useState(null);
+	const [join, setJoin] = React.useState(false);
 	const [accountStatus, setAccountStatus] = React.useState(false);
+	const [hasPermission, setHasPermission] = React.useState(null);
+    const [scanned, setScanned] = React.useState(false);
+    const [modalVisible, setModalVisible] = React.useState(false);
+
+	const theme = useColorScheme();
+    const insets = useSafeAreaInsets();
 	const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
-    const tokenEndpoint = 'https://accounts.spotify.com/api/token';
+	const tokenEndpoint = 'https://accounts.spotify.com/api/token';
 	const clientId = '43d48850732744018aff88a5692d03d5';
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// on mount functions
 
 	// runs functions once app is loaded onto this page
 	React.useEffect(() => {
 
-		// checks the users account status (premium or free spotify account)
 		checkAccountStatus();
-		// checks if the user is able to rejoin a server
 		checkRejoin();
 
-	}, []);
-    /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+		return () => {
+		};
+
+	}, []);
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// Api calls
 
 	const validateAuth = async () => {
-        const accessToken = await getValue("accessToken");
-        const expiration = await getValue("expiration");
-        let expirationTime = parseInt(expiration, 10);
-        let currentTime = new Date().getTime();
+		const accessToken = await getValue("accessToken");
+		const expiration = await getValue("expiration");
+		let expirationTime = parseInt(expiration, 10);
+		let currentTime = new Date().getTime();
 
-        if (accessToken) {
-            if (currentTime >= expirationTime) {
-                // do refresh path
-                await refreshAccessToken();
-            }
-        } else {
+		if (accessToken) {
+			if (currentTime >= expirationTime) {
+				// do refresh path
+				await refreshAccessToken();
+			}
+		} else {
 
-            console.log("Access token was invalid");
+			console.log("Access token was invalid");
 
-            // do login path
-            await AsyncStorage.removeItem("serverCode");
-            await AsyncStorage.removeItem("accessToken");
-            await AsyncStorage.setItem("hosting", "false");
-            await AsyncStorage.setItem("rejoining", "false");
+			// do login path
+			await AsyncStorage.removeItem("serverCode");
+			await AsyncStorage.removeItem("accessToken");
+			await AsyncStorage.setItem("hosting", "false");
+			await AsyncStorage.setItem("rejoining", "false");
 
-            Alert.alert(
-                'Authentication Error',
-                'We were not able to authenticate your Spotify account. Please login again. Thank you.',
-                [
-                    { text: 'OK' }
-                ],
-                { cancelable: false }
-            );
+			Alert.alert(
+				'Authentication Error',
+				'We were not able to authenticate your Spotify account. Please login again. Thank you.',
+				[
+					{ text: 'OK' }
+				],
+				{ cancelable: false }
+			);
 
-            router.replace('/');
-        }
-    };
+			router.replace('/');
+		}
+	};
 
-    // function that will try to refresh the access token with spotify
-    const refreshAccessToken = async () => {
+	// function that will try to refresh the access token with spotify
+	const refreshAccessToken = async () => {
 
-        try {
+		try {
 
-            const refreshToken = await getValue("refreshToken");
+			const refreshToken = await getValue("refreshToken");
 
-            const refreshResponse = await refreshAsync(
-                {
-                    extraParams: {
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        grant_type: "refresh_token",
-                    },
-                    clientId: clientId,
-                    refreshToken: refreshToken,
-                },
-                {
-                    tokenEndpoint: tokenEndpoint,
-                }
-            );
+			const refreshResponse = await refreshAsync(
+				{
+					extraParams: {
+						headers: {
+							'Content-Type': 'application/x-www-form-urlencoded',
+						},
+						grant_type: "refresh_token",
+					},
+					clientId: clientId,
+					refreshToken: refreshToken,
+				},
+				{
+					tokenEndpoint: tokenEndpoint,
+				}
+			);
 
-            const expirationTime = new Date().getTime() + refreshResponse.expiresIn * 1000;
-            await AsyncStorage.setItem('accessToken', refreshResponse.accessToken);
-            await AsyncStorage.setItem('refreshToken', refreshResponse.refreshToken);
-            await AsyncStorage.setItem('expiration', expirationTime.toString());
+			const expirationTime = new Date().getTime() + refreshResponse.expiresIn * 1000;
+			await AsyncStorage.setItem('accessToken', refreshResponse.accessToken);
+			await AsyncStorage.setItem('refreshToken', refreshResponse.refreshToken);
+			await AsyncStorage.setItem('expiration', expirationTime.toString());
 
-        } catch (error) {
+		} catch (error) {
 
-            console.error("Refresh error: ", error);
-            // do login path
-            await AsyncStorage.removeItem("serverCode");
-            await AsyncStorage.removeItem("accessToken");
-            await AsyncStorage.setItem("hosting", "false");
-            await AsyncStorage.setItem("rejoining", "false");
+			console.error("Refresh error: ", error);
+			// do login path
+			await AsyncStorage.removeItem("serverCode");
+			await AsyncStorage.removeItem("accessToken");
+			await AsyncStorage.setItem("hosting", "false");
+			await AsyncStorage.setItem("rejoining", "false");
 
-            Alert.alert(
-                'Authentication Error',
-                'We were not able to authenticate your Spotify account. Please login again. Thank you.',
-                [
-                    { text: 'OK' }
-                ],
-                { cancelable: false }
-            );
+			Alert.alert(
+				'Authentication Error',
+				'We were not able to authenticate your Spotify account. Please login again. Thank you.',
+				[
+					{ text: 'OK' }
+				],
+				{ cancelable: false }
+			);
 
-            router.replace('/');
-        }
+			router.replace('/');
+		}
 
-    };
+	};
 
 	const apiCall = async () => {
 
 		await validateAuth();
 
-        const accessToken = await getValue("accessToken");
+		const accessToken = await getValue("accessToken");
 
-        await fetch('https://api.spotify.com/v1/me', {
-            headers: {
-                Authorization: `Bearer ${accessToken}`,
-            }
-        })
-            .then((response) => response.json())
-            .then((data) => {
+		await fetch('https://api.spotify.com/v1/me', {
+			headers: {
+				Authorization: `Bearer ${accessToken}`,
+			}
+		})
+			.then((response) => response.json())
+			.then((data) => {
 				console.log("Data retreived");
-                AsyncStorage.setItem("username", data.display_name);
-                AsyncStorage.setItem("userId", data.id);
-                AsyncStorage.setItem("accountStatus", data.product);
-            })
-            .catch((error) => {
-                console.log("Fetch error: ", error);
+				AsyncStorage.setItem("username", data.display_name);
+				AsyncStorage.setItem("userId", data.id);
+				AsyncStorage.setItem("accountStatus", data.product);
+			})
+			.catch((error) => {
+				console.log("Fetch error: ", error);
 				AsyncStorage.removeItem("accessToken");
 				AsyncStorage.removeItem("username");
-                AsyncStorage.removeItem("userId");
-                AsyncStorage.removeItem("accountStatus");
+				AsyncStorage.removeItem("userId");
+				AsyncStorage.removeItem("accountStatus");
 				router.replace("/");
-            })
-    };
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+			})
+	};
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// account type functions
 
 	// function to check the users spotify account type and sets the value in use State
@@ -170,10 +186,10 @@ export default function Page() {
 		}
 
 	};
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// other functions
 
 	// function to retreive values from async storage
@@ -186,10 +202,10 @@ export default function Page() {
 			console.error("Get value error: ", error);
 		}
 	};
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// rejoin functions
 
 	// function to check if user can rejoin a server
@@ -257,7 +273,7 @@ export default function Page() {
 		await AsyncStorage.setItem("rejoining", "false");
 
 		if (oldServerCode) {
-			return new Promise ((resolve) => {
+			return new Promise((resolve) => {
 				const socket = io(serverUrl);
 
 				socket.on('connect', () => {
@@ -272,7 +288,7 @@ export default function Page() {
 
 				socket.on('updateUsers', (data) => {
 					if (hosting === 'true') {
-						socket.emit('end', {serverCode: oldServerCode, userId: userId});
+						socket.emit('end', { serverCode: oldServerCode, userId: userId });
 						socket.emit('leaveServer', { serverCode: oldServerCode, userId: userId });
 					} else {
 						socket.emit('leaveServer', { serverCode: oldServerCode, userId: userId });
@@ -312,17 +328,17 @@ export default function Page() {
 			});
 		}
 	};
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// join and host functions
 
 	// function that handles checking server if it is online
 	const checkServerStatus = async () => {
 		try {
 			const response = await fetch('https://aux-server-88bcd769a4b4.herokuapp.com/serverStatus');
-			
+
 			if (response.status === 200) {
 				return true;
 			} else {
@@ -363,10 +379,10 @@ export default function Page() {
 			{ cancelable: false }
 		);
 	};
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// logout functions
 
 	// allows user to logout and takes them back to log in page
@@ -374,144 +390,288 @@ export default function Page() {
 		await AsyncStorage.setItem("accessToken", '');
 		router.replace('/');
 	};
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+    // QR Code Scanner
+	React.useEffect(() => {
+		
+		const getBarCodeScannerPermissions = async () => {
+			const { status } = await BarCodeScanner.requestPermissionsAsync();
+			setHasPermission(status === 'granted');
+	
+			console.log(status);
+		}
+
+		getBarCodeScannerPermissions();
+
+	}, [join]);
+
+	const handleQRScan = async ({type, data}) => {
+		const code = parseInt(data, 10);
+		setScanned(true);
+
+		if (await checkServerStatus()) {
+
+
+			if (code === null) {
+				await AsyncStorage.setItem("serverCode", '');
+
+			} else {
+				await AsyncStorage.setItem("serverCode", data);
+			}
+
+			router.replace('/join');
+		}
+	};
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+	// styles
+
+	// const styles = StyleSheet.create({
+	// 	container: {
+	// 		flex: 1,
+	// 		justifyContent: 'center',
+	// 		alignItems: "center",
+	// 	},
+	// 	routeButtons: {
+	// 		flex: 1,
+	// 		justifyContent: 'center',
+	// 		alignItems: "center",
+	// 		top: '5%'
+	// 	},
+	// 	hostButton: {
+	// 		color: "#7D00D1",
+	// 		marginBottom: 10,
+
+	// 		width: 150,
+	// 		height: 60,
+	// 		borderRadius: 25,
+	// 		paddingHorizontal: 15,
+	// 		justifyContent: 'center',
+	// 		alignItems: 'center'
+	// 	},
+	// 	host: {
+	// 		fontWeight: "bold",
+	// 		fontSize: 40,
+	// 		color: 'white'
+	// 	},
+	// 	logout: {
+	// 		fontWeight: "bold",
+	// 		fontSize: 25,
+	// 		color: "#7D00D1",
+	// 		marginBottom: 50,
+
+	// 	},
+	// 	image: {
+	// 		width: 200,
+	// 		height: 200,
+	// 		marginVertical: 10,
+	// 	},
+	// 	input: {
+	// 		flex: 0,
+	// 		height: 50,
+	// 		width: 150,
+	// 		fontSize: 25,
+	// 		borderColor: '#7D00D1',
+	// 		borderRadius: 25,
+	// 		borderWidth: 2,
+	// 		marginVertical: 10,
+	// 		paddingHorizontal: 15,
+	// 		color: theme === 'light' ? 'black' : 'white',
+	// 	},
+	// });
+	/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+	const styles = StyleSheet.create({
+		container: {
+			flex: 1,
+			alignItems: 'center',
+			backgroundColor: theme === 'light' ? '#FFFFFF' : '#000000'
+		},
+		image: {
+			width: 100,
+			height: 100,
+		},
+		host: {
+			flex: 2,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		join: {
+			flex: 2,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		logout: {
+			flex: 1,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		text: {
+			color: theme === 'light' ? 'black' : 'white',
+			fontWeight: 'bold',
+			fontSize: 15,
+		},
+	});
+
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 	// screen
 
 	// displays the Host button, Server Code text box, Join Button, and Logout button
 	return (
-		<LinearGradient
-			colors={['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
-			start={{ x: 0, y: 0 }}
-			end={{ x: 0, y: 1 }}
-			style={styles.container}
-		>
-			<SafeAreaView style={styles.container}>
-				<StatusBar barStyle='light-content' />
-				<TouchableWithoutFeedback style={styles.container} onPress={() => {Keyboard.dismiss();}}>
-					<View style={styles.container}>
 
-						<View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center', top: '20%' }}>
-							<Text style={{color: 'white', fontSize: 50}}>SHOW LOGO</Text>
-						</View>
+		<SafeAreaView style={styles.container}>
 
-						<View style={styles.routeButtons}>
-							{ accountStatus ? (
-								<TouchableOpacity onPress={async () => {
-									if (await checkServerStatus()) {
-										router.replace('/host');
-									}
-								}}>
-									<LinearGradient
-										colors={['#7D00D1', '#61079d']}
-										style={styles.hostButton}
-										start={{ x: 0, y: 1 }}
-										end={{ x: 1, y: 0 }}
-									>
-										<Text style={styles.host}>Host</Text>
-									</LinearGradient>
-								</TouchableOpacity>
-							) : (
-								<TouchableOpacity onPress={() => hostingDenied()}>
-									<LinearGradient
-										colors={['#7D00D1', '#61079d']}
-										style={styles.hostButton}
-										start={{ x: 0, y: 1 }}
-										end={{ x: 1, y: 0 }}
-									>
-										<Text style={styles.host}>Host</Text>
-									</LinearGradient>
-								</TouchableOpacity>
-							)}			
+			<View style={styles.host}>
+				<TouchableOpacity style={{alignItems: 'center'} }>
+					<MaterialIcons name="speaker-phone" size={75} color={theme === 'light' ? 'black' : 'white'} />
+					<Text style={styles.text} >Host a Session</Text>
+				</TouchableOpacity>
+			</View>
 
-							<TextInput
-								style={styles.input}
-								placeholder="Join"
-								placeholderTextColor='white'
-								value={serverCode}
-								onChangeText={setServerCode}
-								returnKeyType='join'
-								keyboardAppearance='dark'
-								keyboardType='numbers-and-punctuation'
-								maxLength={6}
-								onSubmitEditing={() => {
-									if (serverCode && (serverCode.toString()).length === 6){ 
-										joinRoute()
-									}
-								}}
-								textAlign='center'
-							/>
-						</View>
 
-						<TouchableOpacity onPress={() => logout()}>
-							<Text style={styles.logout}>Log Out</Text>
-						</TouchableOpacity>
+			{/* <StatusBar />
+
+			<Image style={styles.image} source={require("../images/AuxSmall.png")} />
+
+			<View style={styles.host}>
+				<TouchableOpacity style={{alignItems: 'center'} }>
+					<MaterialIcons name="speaker-phone" size={75} color={theme === 'light' ? 'black' : 'white'} />
+					<Text style={styles.text} >Host a Session</Text>
+				</TouchableOpacity>
+			</View>
+
+			<Divider />
+
+			<View style={styles.join}>
+				<TouchableOpacity style={{alignItems: 'center'}} >
+					<MaterialIcons name="person-add" size={75} color={theme === 'light' ? 'black' : 'white'} />
+					<Text style={styles.text} >Join a Session</Text>
+				</TouchableOpacity>
+			</View>
+
+			<View style={styles.logout}>
+				<TouchableOpacity onPress={async () => await logout()}>
+					<Text style={styles.text}>Log Out</Text>
+				</TouchableOpacity>
+			</View> */}
+
+		</SafeAreaView>
+
+		// <LinearGradient
+		// 	// colors={['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
+		// 	colors={theme === 'dark' ? ['rgb(25, 20, 20)', 'rgb(25, 20, 20)'] : ['#FFFFFF', '#FFFFFF']}
+		// 	start={{ x: 0, y: 0 }}
+		// 	end={{ x: 0, y: 1 }}
+		// 	style={styles.container}
+		// >
+		// 	{/* <SafeAreaView style={styles.container}> */}
+		// 		<StatusBar />
+
+		// 		{(join && hasPermission) ? (
+		// 			<View style={{ flex: 1, width: '100%', height: '100%', position: 'absolute', paddingTop: 10}}>
+		// 				<View style={{ justifyContent: 'center', flexDirection: 'row', paddingBottom: 10, backgroundColor: theme === 'light' ? '#FFFFFF' : '#191414'}}>
+		// 				<TouchableOpacity style={{position: 'absolute', left: 0, paddingLeft: 10}} onPress={() => {setJoin(false); setScanned(false)}}>
+		// 					<Text style={{fontSize: 25, color: '#7D00D1'}} >Cancel</Text>
+		// 				</TouchableOpacity>
+		// 				<Text style={{ fontSize: 25, color: theme === 'light' ? '#191414' : '#FFFFFF'}}>Scan QR Code</Text>
+		// 				</View>
 						
-					</View>
-				</TouchableWithoutFeedback>
-			</SafeAreaView>
-		</LinearGradient>
+		// 				<BarCodeScanner
+		// 					style={{ height: "100%", marginBottom: 100}}
+		// 					onBarCodeScanned={scanned ? undefined : handleQRScan}
+		// 				/>
+
+		// 			</View>
+		// 		) : (
+		// 			<TouchableWithoutFeedback style={styles.container} onPress={() => { Keyboard.dismiss(); }}>
+		// 				<View style={styles.container}>
+
+		// 					<View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center', top: '0%' }}>
+		// 						<Image style={{width: 300, height: 300}} source={require("../images/AuxSmall.png")} />
+		// 					</View>
+
+		// 					<View style={styles.routeButtons}>
+		// 						{accountStatus ? (
+		// 							<TouchableOpacity onPress={async () => {
+		// 								if (await checkServerStatus()) {
+		// 									router.replace('/host');
+		// 								}
+		// 							}}>
+		// 								<LinearGradient
+		// 									colors={['#7D00D1', '#61079d']}
+		// 									style={styles.hostButton}
+		// 									start={{ x: 0, y: 1 }}
+		// 									end={{ x: 1, y: 0 }}
+		// 								>
+		// 									<Text style={styles.host}>Host</Text>
+		// 								</LinearGradient>
+		// 							</TouchableOpacity>
+		// 						) : (
+		// 							<TouchableOpacity onPress={() => hostingDenied()}>
+		// 								<LinearGradient
+		// 									colors={['#7D00D1', '#61079d']}
+		// 									style={styles.hostButton}
+		// 									start={{ x: 0, y: 1 }}
+		// 									end={{ x: 1, y: 0 }}
+		// 								>
+		// 									<Text style={styles.host}>Host</Text>
+		// 								</LinearGradient>
+		// 							</TouchableOpacity>
+		// 						)}
+
+		// 						{/* <TextInput
+		// 							style={styles.input}
+		// 							placeholder="Join"
+		// 							placeholderTextColor={theme === 'dark' ? 'white' : 'black'}
+		// 							value={serverCode}
+		// 							onChangeText={setServerCode}
+		// 							returnKeyType='join'
+		// 							keyboardAppearance={theme}
+		// 							keyboardType='numbers-and-punctuation'
+		// 							maxLength={6}
+		// 							onSubmitEditing={() => {
+		// 								if (serverCode && (serverCode.toString()).length === 6) {
+		// 									joinRoute()
+		// 								}
+		// 							}}
+		// 							textAlign='center'
+		// 						/> */}
+
+		// 						<TouchableOpacity onPress={() => {
+		// 							if (join) {
+		// 								setJoin(false);
+		// 							} else {
+		// 								setJoin(true);
+		// 							}
+		// 						}}>
+		// 							<LinearGradient
+		// 								colors={['#7D00D1', '#61079d']}
+		// 								style={styles.hostButton}
+		// 								start={{ x: 0, y: 1 }}
+		// 								end={{ x: 1, y: 0 }}
+		// 							>
+		// 								<Text style={styles.host}>Join</Text>
+		// 							</LinearGradient>
+		// 						</TouchableOpacity>
+		// 					</View>							
+
+		// 					<TouchableOpacity onPress={() => logout()}>
+		// 						<Text style={styles.logout}>Log Out</Text>
+		// 					</TouchableOpacity>
+
+		// 				</View>
+		// 			</TouchableWithoutFeedback>
+		// 		)}
+					
+				
+		// 	{/* </SafeAreaView> */}
+		// </LinearGradient>
 	);
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////////////////
 }
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// styles
-
-const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: "center",
-	},
-	routeButtons: {
-		flex: 1,
-		justifyContent: 'center',
-		alignItems: "center",
-		top: '5%'
-	},
-	hostButton: {
-		color: "#7D00D1",
-		marginBottom: 10,
-
-		width: 150,
-		height: 60,
-		borderRadius: 25,
-		paddingHorizontal: 15,
-		justifyContent: 'center',
-		alignItems: 'center'
-	},
-	host: {
-		fontWeight: "bold",
-		fontSize: 40,
-		color: "white",
-	},
-	logout: {
-		fontWeight: "bold",
-		fontSize: 25,
-		color: "#7D00D1",
-		marginBottom: 50,
-
-	},
-	image: {
-		width: 200,
-		height: 200,
-		marginVertical: 10,
-	},
-	input: {
-		flex: 0,
-		height: 50,
-		width: 150,
-		fontSize: 25,
-		borderColor: '#7D00D1',
-		borderRadius: 25,
-		borderWidth: 1,
-		marginVertical: 10,
-		paddingHorizontal: 15,
-		color: 'white',
-	},
-});  
-/////////////////////////////////////////////////////////////////////////////////////////////////

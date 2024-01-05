@@ -14,3 +14,5 @@ Future Features:
 2) Make it so host can choose how long the searching and voting phases are
 3) Make it so host can kick people out of server
 4) Make it so if there is a tie it adds all songs that were tied into the queue
+5) Add a QR code host can show people for them to join
+6) Allow users to vote to skip

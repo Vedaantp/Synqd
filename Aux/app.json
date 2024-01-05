@@ -1,27 +1,31 @@
 {
   "expo": {
-    "name": "Aux",
+    "name": "Auxx",
     "slug": "Aux",
     "version": "1.0.0",
     "scheme": "auxapp",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    // "icon": "./assets/icon.png",
+    "icon": "./images/AuxLogo.png",
+    "userInterfaceStyle": "automatic",
     "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      // "image": "./assets/splash.png",
+      "image": "./images/AuxFull.png",
+      "backgroundColor": "#191414",
+      "resizeMode": "contain"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aux.app", // com.aux.app for builds com.Aux for sim
+      "bundleIdentifier": "com.aux.app",
       "config": {
         "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access camera."
       }
-      // "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
@@ -39,7 +43,13 @@
       }
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-barcode-scanner",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access camera."
+        }
+      ]
       // "@react-native-firebase/app",
       // "expo-build-properties",
       // [

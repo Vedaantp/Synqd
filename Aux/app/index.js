@@ -1,76 +1,65 @@
 import * as React from 'react';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri, useAuthRequest, exchangeCodeAsync, refreshAsync } from 'expo-auth-session';
-import pkceChallenge from 'react-native-pkce-challenge';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { StyleSheet, Text, TouchableOpacity, View, Image, ActivityIndicator } from "react-native";
-import LinearGradient from 'react-native-linear-gradient';
+import { StyleSheet, Text, TouchableOpacity, View, Image, StatusBar, useColorScheme, Alert } from "react-native";
 import { router } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import io from 'socket.io-client';
+import { MaterialIcons } from '@expo/vector-icons';
 
 WebBrowser.maybeCompleteAuthSession();
 
 export default function Page() {
 
-
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // variables
-
     const [login, setLogin] = React.useState(true);
     const [loading, setLoading] = React.useState(true);
+    const [accountStatus, setAccountStatus] = React.useState(false);
+	const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
     const authorizationEndpoint = 'https://accounts.spotify.com/authorize';
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
     const clientId = '43d48850732744018aff88a5692d03d5';
     const scopes = ['user-read-email', 'user-read-private', 'user-read-playback-state', 'user-modify-playback-state'];
-    redirectURI = makeRedirectUri({ native: 'auxapp://callback' });
-    // pkce code challenge for spotify OAuth using PKCE for safety
-    const challenge = pkceChallenge();
-    const insets = useSafeAreaInsets();
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-
+    const redirectURI = makeRedirectUri({ native: 'auxapp://callback' });
+    const theme = useColorScheme();
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // on mount functions
 
     React.useEffect(() => {
 
-        // function to validate the auth for spotify on app open
         const validateAuth = async () => {
             const accessToken = await getValue("accessToken");
             const expiration = await getValue("expiration");
             let expirationTime = parseInt(expiration, 10);
             let currentTime = new Date().getTime();
 
-            // if the access token is set then check the expiratation
-            // else make user log in again to get auth
             if (accessToken) {
-
-                // if the token is not expired go to the home screen of the app
-                // else refresh the access token
                 if (currentTime < expirationTime) {
                     setLogin(false);
-                    setTimeout(() => {router.replace('/home')}, 1000);
+
+                    await checkAccountStatus();
+                    await checkRejoin();
                 } else {
                     setLogin(false);
                     refreshAccessToken();
                 }
             } else {
                 setLogin(true);
-                setLoading(false);
             }
         };
 
-        // calls the validation function to check the access token validity
         validateAuth();
 
-    }, []);
-    /////////////////////////////////////////////////////////////////////////////////////////////////
+        setTimeout(() => setLoading(false), 2500);
 
+    }, []);
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // oauth functions
 
-    // the auth request for spotify using expo's OAuth functions
     const [request, response, promptAsync] = useAuthRequest(
         {
             clientId: clientId,
@@ -85,11 +74,8 @@ export default function Page() {
         }
     );
 
-    // once user logs in this code is ran on attachment of the response
     React.useEffect(() => {
 
-        // if user is logging in it will check if the response is successfull 
-        // and request the exchange code from spotify
         if (login) {
             if (response?.type === 'success') {
 
@@ -99,9 +85,7 @@ export default function Page() {
         }
     }, [response]);
 
-    // requesting the exchange token to get access token from spotify using the expo OAuth functions
     const exchangeCode = async () => {
-        setLoading(true);
 
         try {
             const tokenResponse = await exchangeCodeAsync(
@@ -124,17 +108,14 @@ export default function Page() {
             await AsyncStorage.setItem('refreshToken', tokenResponse.refreshToken);
             await AsyncStorage.setItem('expiration', expirationTime.toString());
 
-            // validates the authorization once access token is received
             await validateAuth();
 
         } catch (error) {
             setLogin(true);
-            setLoading(false);
             console.error("Token exchange error: ", error);
         }
     };
 
-    // function to refresh the access token from spotify using refresh token
     const refreshAccessToken = async () => {
 
         try {
@@ -166,16 +147,11 @@ export default function Page() {
 
         } catch (error) {
             setLogin(true);
-            setLoading(false);
             console.error("Refresh error: ", error);
         }
 
     };
 
-    // function to validate the authorization
-    // checks to see if the access token is set
-    // if it is then it makes the api call and takes user to the home screen
-    // else it makes the user log in
     const validateAuth = async () => {
         const accessToken = await getValue("accessToken");
         const expiration = await getValue("expiration");
@@ -183,29 +159,207 @@ export default function Page() {
         let currentTime = new Date().getTime();
 
         if (accessToken) {
-            // if the token is not expired go to the home screen of the app
-            // else refresh the access token
             if (currentTime < expirationTime) {
                 setLogin(false);
-                // apiCall();
-                setTimeout(() => {router.replace('/home')}, 1000);
+
+                await checkAccountStatus();
+                await checkRejoin();
+
+
             } else {
                 setLogin(false);
                 await refreshAccessToken();
             }
         } else {
             setLogin(true);
-            setLoading(false);
         }
     };
-    /////////////////////////////////////////////////////////////////////////////////////////////////
 
+    const logout = async () => {
+		await AsyncStorage.setItem("accessToken", '');
+		router.replace('/');
+	};
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // account status functions
+
+	async function checkAccountStatus() {
+
+		await apiCall();
+
+		const product = await getValue('accountStatus');
+
+		if (product === 'premium') {
+			setAccountStatus(true);
+		} else {
+			setAccountStatus(false);
+		}
+
+	};
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // hosting function
+
+    const hostRoute = async () => {
+        const accessToken = await getValue("accessToken");
+
+        if (!accessToken) {
+            let title = "Sign In";
+            let message = "Please sign in to your spotify account before trying to Host or Join a session. Thank you.";
+            await sendAlert(title, message);
+            return;
+        }
+
+        if (accountStatus) {
+            if (await checkServerStatus()) {
+                router.push('/host');
+            } else {
+                let title = "Oops...";
+                let message = "The servers are not currently online right now. Please give our team time to fix the issues. Thank you.";
+                await sendAlert(title, message);
+            }
+        } else {
+            let title = "Oops...";
+            let message = "You can't host a session if you are not a Premium member of Spotify.";
+            await sendAlert(title, message);
+        }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // joining function
+
+    const joinRoute = async () => {
+        const accessToken = await getValue("accessToken");
+
+        if (!accessToken) {
+            let title = "Sign In";
+            let message = "Please sign in to your spotify account before trying to Host or Join a session. Thank you.";
+            await sendAlert(title, message);
+            return;
+        } else {
+            router.push('/joinModal')
+        }
+    };
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+	// rejoin functions
+
+	const checkRejoin = async () => {
+
+		const oldServerCode = await getValue("serverCode");
+
+		if (oldServerCode) {
+			Alert.alert(
+				"Session Found",
+				"Do you want to rejoin?",
+				[
+					{
+						text: "No",
+						style: "cancel",
+						onPress: () => {
+							stopRejoin();
+						},
+					},
+					{
+						text: "Yes",
+						onPress: () => {
+							rejoin();
+						},
+					},
+				],
+				{ cancelable: false }
+			);
+		}
+	};
+
+	const rejoin = async () => {
+		const oldServerCode = await getValue("serverCode");
+		const hosting = await getValue("hosting");
+
+		if (oldServerCode) {
+			await AsyncStorage.setItem("rejoining", "true");
+
+			if (hosting === 'true') {
+				router.replace('/host');
+			} else {
+				router.replace('/join');
+			}
+
+		} else {
+			await AsyncStorage.setItem("rejoining", "false");
+		}
+	};
+
+	const stopRejoin = async () => {
+		const userId = await getValue("userId");
+		const username = await getValue("username");
+		const hosting = await getValue("hosting");
+		const oldServerCode = await getValue("serverCode");
+
+		await AsyncStorage.removeItem("serverCode");
+		await AsyncStorage.setItem("hosting", 'false');
+		await AsyncStorage.setItem("rejoining", "false");
+
+		if (oldServerCode) {
+			return new Promise((resolve) => {
+				const socket = io(serverUrl);
+
+				socket.on('connect', () => {
+					console.log('Connected to server');
+
+					if (hosting === 'true') {
+						socket.emit("updateHost", { username: username, userId: userId, serverCode: oldServerCode });
+					} else {
+						socket.emit('updateUser', { username: username, userId: userId, serverCode: oldServerCode });
+					}
+				});
+
+				socket.on('updateUsers', (data) => {
+					if (hosting === 'true') {
+						socket.emit('end', { serverCode: oldServerCode, userId: userId });
+						socket.emit('leaveServer', { serverCode: oldServerCode, userId: userId });
+					} else {
+						socket.emit('leaveServer', { serverCode: oldServerCode, userId: userId });
+					}
+				});
+
+				socket.on('hostLeft', (data) => {
+					console.log('Rejoin canceled');
+					socket.disconnect();
+					resolve();
+				});
+
+				socket.on('userStoppedRejoin', (data) => {
+					console.log("Rejoin canceled");
+					socket.disconnect();
+					resolve();
+				});
+
+				socket.on('joinError', (data) => {
+					console.log("Rejoin canceled");
+					socket.disconnect();
+					resolve();
+				});
+
+				socket.on('rejoinError', (data) => {
+					console.log("Rejoin canceled");
+					socket.disconnect();
+					resolve();
+				});
+
+				socket.on('serverFull', (data) => {
+					console.log("Rejoin canceled");
+					socket.disconnect();
+					resolve();
+				});
+
+			});
+		}
+	};
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // api call functions
 
-    // function to make a user profile api call to gather necessary information for app purposes
-    // stores the username, userId (unique for each user), and account status of the user
     const apiCall = async () => {
         const accessToken = await getValue("accessToken");
 
@@ -216,22 +370,23 @@ export default function Page() {
         })
             .then((response) => response.json())
             .then((data) => {
-                console.log("User data: ", data);
+                console.log("Data retreived");
                 AsyncStorage.setItem("username", data.display_name);
                 AsyncStorage.setItem("userId", data.id);
                 AsyncStorage.setItem("accountStatus", data.product);
             })
             .catch((error) => {
                 console.log("Fetch error: ", error);
+                AsyncStorage.removeItem("accessToken");
+				AsyncStorage.removeItem("username");
+				AsyncStorage.removeItem("userId");
+				AsyncStorage.removeItem("accountStatus");
             })
     };
-    /////////////////////////////////////////////////////////////////////////////////////////////////
 
-    
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // other functions
 
-    // function to retrieve values from async storage
     const getValue = async (key) => {
         try {
             const value = await AsyncStorage.getItem(key);
@@ -241,75 +396,126 @@ export default function Page() {
             console.error("Get value error: ", error);
         }
     };
-    /////////////////////////////////////////////////////////////////////////////////////////////////
 
+    const checkServerStatus = async () => {
+		try {
+			const response = await fetch('https://aux-server-88bcd769a4b4.herokuapp.com/serverStatus');
+
+			if (response.status === 200) {
+				return true;
+			} else {
+				return false;
+			}
+		} catch (error) {
+			console.error("Server status error: ", error);
+			return false;
+		}
+	};
+
+	const sendAlert = async (title, message) => {
+		Alert.alert(
+			`${title}`,
+			`${message}`,
+			[
+				{ text: 'OK' }
+			],
+			{ cancelable: false }
+		);
+	};
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+    // styles
+
+    const styles = StyleSheet.create({
+		container: {
+			flex: 1,
+			alignItems: 'center',
+			backgroundColor: theme === 'light' ? '#FFFFFF' : '#000000'
+		},
+		image: {
+			width: 100,
+			height: 100,
+		},
+		host: {
+			flex: 2,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		join: {
+			flex: 2,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		log: {
+			flex: 1,
+			justifyContent: 'center',
+			alignItems: 'center',
+		},
+		text: {
+			color: theme === 'light' ? 'black' : 'white',
+			fontWeight: 'bold',
+			fontSize: 15,
+		},
+        spotifyButton: {
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 5,
+        },
+        spotifyIcon: {
+            width: 20,
+            height: 20
+        },
+	});
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // screen
+    if (!loading) {
 
-    // displays the login screen
-    // if user clicks log in it starts the async log in functions from expo's OAuth
-    return (
-        <LinearGradient
-			colors={['rgb(25, 20, 20)', 'rgb(25, 20, 20)']}
-			start={{ x: 0, y: 0 }}
-			end={{ x: 0, y: 1 }}
-			style={styles.container}
-		>
-
-            { !loading ? (
-                <SafeAreaView style={styles.container}>
-                <View style={styles.container}>
-                    <View style={{ position: 'absolute', justifyContent: 'center', alignItems: 'center', top: '20%' }}>
-                        <Text style={{color: 'white', fontSize: 50}}>SHOW LOGO</Text>
-                    </View>
-                    <TouchableOpacity style={styles.button} disabled={!request} onPress={() => { promptAsync() }}>
-                        <View style={{flexDirection: 'row', justifyContent: 'center', alignItems: 'center'}}>
-                            <Image style={styles.logo} source={require("../images/spotify-icon-black.png")}/>
-                            <Text style={styles.text} >Login with Spotify</Text>
-                        </View>
-                        {/* <Image style={styles.logo} source={require("../images/spotify-logo.png")}/> */}
+        return (
+            <SafeAreaView style={styles.container}>
+                <StatusBar />
+    
+                <Image style={styles.image} source={require("../images/AuxSmall.png")} />
+    
+                <View style={styles.host}>
+                    <TouchableOpacity style={ {alignItems: 'center'} } onPress={async () => await hostRoute()} >
+                        <MaterialIcons name="speaker-phone" size={75} color={theme === 'light' ? 'black' : 'white'} />
+                        <Text style={styles.text} >Host</Text>
                     </TouchableOpacity>
                 </View>
-                </SafeAreaView>
-            ) : (
-                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                    <Text style={{color: 'white', fontSize: 50}}>SHOW LOGO</Text>
+    
+                <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 17, paddingHorizontal: '3%'}} >Or</Text>
+    
+                <View style={styles.join}>
+                    <TouchableOpacity style={{alignItems: 'center'}} onPress={async () => await joinRoute()} >
+                        <MaterialIcons name="person-add" size={75} color={theme === 'light' ? 'black' : 'white'} />
+                        <Text style={styles.text} >Join</Text>
+                    </TouchableOpacity>
                 </View>
-            )}
-            
+    
+                <View style={styles.log}>
+                    <View style={styles.spotifyButton}>
+                        <Image style={styles.spotifyIcon} source={require("../images/spotify-icon-green.png")} />
+                        <TouchableOpacity style={styles.spotifyButton} onPress={async () => {
+                            if (login) {
+                                promptAsync();
+                            } else {
+                                await logout()
+                            }
+                        }}>
+                            <Text style={styles.text}>{login ? 'Log In' : 'Log Out'}</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+    
+            </SafeAreaView>
+        );
 
-        </LinearGradient>
-        
-    );
-    /////////////////////////////////////////////////////////////////////////////////////////////////
-}
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-// styles
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: "center",
-    },
-    button: {
-        backgroundColor: '#1DB954',
-        borderRadius: 100,
-        paddingHorizontal: 10,
-        paddingVertical: 7
-    },
-    text: {
-        fontSize: 20,
-        fontWeight: 'bold',
-        color: '#191414',
-        paddingLeft: 5
-    },
-    logo: {
-        width: 35,
-        height: 35,
+    } else {
+        return(
+            <SafeAreaView style={styles.container}>
+                <Text style={{color: 'black'}} >Make a loading screen</Text>
+            </SafeAreaView>
+        );
     }
-});
-/////////////////////////////////////////////////////////////////////////////////////////////////
+}
