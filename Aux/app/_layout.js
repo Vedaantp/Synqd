@@ -2,7 +2,7 @@ import { Stack } from "expo-router/stack";
 import { Button, useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { router } from "expo-router";
-
+import { MaterialIcons } from '@expo/vector-icons';
 
 export default () => {
     const theme = useColorScheme();
@@ -12,7 +12,7 @@ export default () => {
             <Stack
                 screenOptions={{
                     headerShown: false,
-                    animation: 'fade'
+                    animation: 'fade',
                 }}
             >
 
@@ -21,12 +21,11 @@ export default () => {
                     options={{
                         presentation: 'modal',
                         animation: 'default',
-                        headerShown: true,
+                        headerShown: false,
                         title: null,
                         headerStyle: {
-                            backgroundColor: theme === 'light' ? 'white' : 'black',
+                            backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424',
                         },
-                        headerLeft: () => <Button onPress={() => router.push('/')} title="Cancel" />
                     }}
                 />
 
@@ -35,12 +34,7 @@ export default () => {
                     options={{
                         presentation: 'modal',
                         animation: 'default',
-                        headerShown: true,
-                        title: "Queue",
-                        headerStyle: {
-                            backgroundColor: theme === 'light' ? 'white' : 'black',
-                        },
-                        headerLeft: () => <Button onPress={() => router.push('/host')} title="Back" />
+                        headerShown: false,
                     }}
                 />
 
@@ -48,13 +42,8 @@ export default () => {
                     name="sessionInfoCard"
                     options={{
                         presentation: 'card',
-                        animation: 'default',
-                        headerShown: true,
-                        title: "Session Info",
-                        headerStyle: {
-                            backgroundColor: theme === 'light' ? 'white' : 'black',
-                        },
-                        headerLeft: () => <Button onPress={() => router.push('/host')} title="Back" />
+                        animation: 'slide_from_left',
+                        headerShown: false,
                     }}
                 />
 

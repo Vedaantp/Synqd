@@ -1,11 +1,11 @@
-import React from 'react';
-import { Stack } from "expo-router/stack";
+import * as React from 'react';
 import { View, Text, StyleSheet, useColorScheme, TouchableOpacity, TouchableWithoutFeedback, TextInput, useWindowDimensions, Button, Alert, Keyboard } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { MaterialIcons } from '@expo/vector-icons';
 import { BarCodeScanner } from 'expo-barcode-scanner';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function Modal() {
     const theme = useColorScheme();
@@ -14,11 +14,14 @@ export default function Modal() {
     const [hasPermission, setHasPermission] = React.useState(null);
     const [serverCode, setServerCode] = React.useState(null);
     const {height, width} = useWindowDimensions();
+    const [typing, setTyping] = React.useState(false);
+    const insets = useSafeAreaInsets();
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // QR Code Scanner
 
     const handleKeyboardDismiss = () => {
+        setTyping(false);
         Keyboard.dismiss();
     };
 		
@@ -36,7 +39,7 @@ export default function Modal() {
 		setScanned(true);
         setScanner(false);
 
-        console.log("QR Code Scanned");
+        console.log("QR Code Scanned", code);
 
 
         if (!accessToken) {
@@ -55,6 +58,8 @@ export default function Modal() {
             } else {
                 await AsyncStorage.setItem("serverCode", data);
             }
+
+            router.replace('/join');
 
         } else {
             let title = "Oops...";
@@ -85,6 +90,8 @@ export default function Modal() {
                 await AsyncStorage.setItem("serverCode", serverCode);
             }
 
+            router.replace('/join');
+
         } else {
             let title = "Oops...";
             let message = "The servers are not currently online right now. Please give our team time to fix the issues. Thank you.";
@@ -92,7 +99,6 @@ export default function Modal() {
         }
 	};
 
-    // function to check the server status
     const checkServerStatus = async () => {
 		try {
 			const response = await fetch('https://aux-server-88bcd769a4b4.herokuapp.com/serverStatus');
@@ -108,7 +114,6 @@ export default function Modal() {
 		}
 	};
 
-    // if user is not a premium spotify member they will not be able to host a server
 	const sendAlert = async (title, message) => {
 		Alert.alert(
 			`${title}`,
@@ -120,7 +125,6 @@ export default function Modal() {
 		);
 	};
 
-    // function to retrieve values from async storage
     const getValue = async (key) => {
         try {
             const value = await AsyncStorage.getItem(key);
@@ -135,14 +139,41 @@ export default function Modal() {
 		container: {
 			flex: 1,
 			alignItems: 'center',
-			backgroundColor: theme === 'light' ? '#FFFFFF' : '#000000'
+			backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424'
 		},
+        header: {
+            // position: 'absolute',
+            zIndex: 2,
+            flexDirection: 'row',
+            paddingTop: insets.top / 3,
+            marginLeft: insets.left, 
+            marginRight: insets.right, 
+            width: '100%',
+            borderBottomWidth: 1,
+            borderColor: theme === 'light' ? 'black' : 'white',
+            paddingBottom: insets.top / 3,
+            backgroundColor: theme === 'light' ? '#FFFFFF': '#242424',
+            shadowColor: theme == 'light' ? 'black' : 'white',
+            shadowOpacity: 0.25,
+            shadowRadius: 10,
+            shadowOffset: {
+            width: 0,
+            height: 5,
+            },
+            elevation: 5
+        },
+        exitButton: {
+            flex: 1,
+            justifyContent: 'center',
+            paddingHorizontal: 20,
+        },
         code: {
             flex: 1,
             justifyContent: 'center',
 			alignItems: 'center',
         },
         input: {
+            width: width * .45,
 			fontSize: 30,
 			borderColor: theme === 'light' ? 'black' : 'white',
 			borderRadius: 30,
@@ -158,7 +189,7 @@ export default function Modal() {
         },
         scanner: {
             flex: 1,
-            zIndex: 2,
+            zIndex: 1,
             position: 'absolute',
             width: width,
             height: height,
@@ -170,22 +201,29 @@ export default function Modal() {
 
     <TouchableWithoutFeedback style={styles.container} onPress={handleKeyboardDismiss}>
         <View style={styles.container} >
-            <StatusBar style='light'/>
-            <Stack.Screen
-                options={{
-                    headerLeft: () => <Button onPress={() => router.push('/')} title="Cancel"/>
-                }}
-            />
+            <StatusBar />
+
+            <View style={styles.header} >
+                <TouchableOpacity style={styles.exitButton} onPress={() => {
+                    if (scanner) {
+                        setScanner(false);
+                    } else {
+                        router.back();
+                    }
+                    }} >
+                    <MaterialIcons name="arrow-back" size={30} color={theme === 'light' ? 'black' : 'white'} />
+                </TouchableOpacity>
+
+                <View style={{ flex: 7, alignItems: 'center' }}>
+                    <Text style={{ color: theme === 'light' ? 'black' : 'white', fontWeight: 'bold', fontSize: 30}}>{scanner ? 'Scan QR Code' : 'Join'}</Text>
+                </View>
+
+                <View style={styles.exitButton} />
+            </View>
 
             { (scanner && hasPermission) && (
                 
                 <View style={styles.scanner}>
-                    <Stack.Screen
-                        options={{
-                            headerLeft: () => <Button onPress={() => setScanner(false)} title="Back"/>
-                        }}
-                    />
-
                     <BarCodeScanner onBarCodeScanned={scanned ? undefined : handleQRScan} style={styles.scanner} />
                 </View>
             )}
@@ -193,7 +231,7 @@ export default function Modal() {
             <View style={styles.code}>
                 <TextInput
                     style={styles.input}
-                    placeholder="Enter Code"
+                    placeholder={typing ? '' : 'Enter Code'}
                     placeholderTextColor={theme === 'light' ? 'black' : 'white'}
                     value={serverCode}
                     onChangeText={setServerCode}
@@ -201,9 +239,13 @@ export default function Modal() {
                     keyboardAppearance={theme}
                     keyboardType='numbers-and-punctuation'
                     maxLength={6}
-                    onSubmitEditing={() => {
+                    clearTextOnFocus={true}
+                    onFocus={() => setTyping(true)}
+                    onSubmitEditing={async () => {
+                        setTyping(false);
+
                         if (serverCode && (serverCode.toString()).length === 6) {
-                            joinRoute()
+                            await joinRoute();
                         }
                     }}
                     textAlign='center'

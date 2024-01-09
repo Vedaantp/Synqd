@@ -21,7 +21,7 @@ export default function Page() {
     const authorizationEndpoint = 'https://accounts.spotify.com/authorize';
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
     const clientId = '43d48850732744018aff88a5692d03d5';
-    const scopes = ['user-read-email', 'user-read-private', 'user-read-playback-state', 'user-modify-playback-state'];
+    const scopes = ['user-read-email', 'user-read-private', 'user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing'];
     const redirectURI = makeRedirectUri({ native: 'auxapp://callback' });
     const theme = useColorScheme();
 
@@ -138,7 +138,7 @@ export default function Page() {
                 }
             );
 
-            const expirationTime = new Date().getTime() + refreshResponse.expiresIn * 1000;
+            const expirationTime = Date.now() + refreshResponse.expiresIn * 1000;
             await AsyncStorage.setItem('accessToken', refreshResponse.accessToken);
             await AsyncStorage.setItem('refreshToken', refreshResponse.refreshToken);
             await AsyncStorage.setItem('expiration', expirationTime.toString());
@@ -212,7 +212,7 @@ export default function Page() {
 
         if (accountStatus) {
             if (await checkServerStatus()) {
-                router.push('/host');
+                router.replace('/host');
             } else {
                 let title = "Oops...";
                 let message = "The servers are not currently online right now. Please give our team time to fix the issues. Thank you.";
@@ -430,7 +430,7 @@ export default function Page() {
 		container: {
 			flex: 1,
 			alignItems: 'center',
-			backgroundColor: theme === 'light' ? '#FFFFFF' : '#000000'
+			backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424'
 		},
 		image: {
 			width: 100,
