@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { View, Alert, StatusBar, Text, StyleSheet, useColorScheme, useWindowDimensions, TouchableOpacity, TouchableWithoutFeedback, Modal } from 'react-native';
+import { View, Alert, StatusBar, Text, StyleSheet, useColorScheme, useWindowDimensions, TouchableOpacity, TouchableWithoutFeedback, Modal, ActivityIndicator } from 'react-native';
 import { router } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
 import io from 'socket.io-client';
@@ -20,6 +21,7 @@ function TimeDisplay({ style, hours, minutes, seconds }) {
 }
 
 export default function Card() {
+    const [loaded, setLoaded] = React.useState(false);
     const theme = useColorScheme();
     const [showQRCode, setShowQRCode] = React.useState(false);
     const {height, width} = useWindowDimensions();
@@ -29,6 +31,7 @@ export default function Card() {
     const [socket, setSocket] = React.useState(null);
     const [timeElapsed, setTimeElapsed] = React.useState(null);
     const [hosting, setHosting] = React.useState(false);
+    const [userId, setUserId] = React.useState(null);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
     let sessionTimer = null
 
@@ -49,9 +52,11 @@ export default function Card() {
         const getSessionInfo = async () => {
             const serverCode = await getValue('serverCode');
             const hosting = await getValue("hosting");
+            const userId = await getValue("userId");
 
             setServerCode(serverCode);
             setHosting(hosting);
+            setUserId(userId);
 
             theSocket.emit("joinServerCode", { serverCode: serverCode });
             theSocket.emit("sessionTime", { serverCode: serverCode }); 
@@ -62,10 +67,11 @@ export default function Card() {
 
         theSocket.on('updateUsers', (data) => {
 
-            let users = data.users.map((item) => item.username);
-            users.unshift(data.host.username);
+            let users = data.users.map((item) => item);
+            users.unshift(data.host);
 
             setUserList(users);
+            setLoaded(true);
 
             if (sessionTimer === null) {
                 sessionTimer = setInterval(() => getSessionTimer(), 1000);
@@ -99,6 +105,16 @@ export default function Card() {
         await AsyncStorage.removeItem("serverCode");
         await AsyncStorage.setItem("hosting", "false");
         await AsyncStorage.setItem("rejoining", "false");
+
+    };
+
+    const kickUser = async (kickId) => {
+        const serverCode = await getValue("serverCode");
+
+        if (hosting && socket) {
+            socket.emit('leaveServer', {serverCode: serverCode, userId: kickId});
+        }
+
     };
 
     const askLeave = async () => {
@@ -239,7 +255,7 @@ export default function Card() {
         userInfo: {
             flexDirection: 'column',
             width: '100%',
-            alignItems: 'center',
+            alignItems: 'flex-start',
         },
         endSessionButton: {
             marginBottom: '15%',
@@ -286,54 +302,76 @@ export default function Card() {
             <View style={styles.exitButton} />
         </View>
 
-        <View style={styles.main}>
-            <View style={styles.sessionInfo}>
-                <TouchableOpacity onPress={() => setShowQRCode(true)} style={{ flexDirection: 'row', marginRight: 'auto', alignItems: 'center'}}>
-                    <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingLeft: '5%', paddingRight: '1%' }}>{theServerCode ? theServerCode : 'N/A'}</Text>
-                    { theServerCode && (
-                        <QRCode value={theServerCode} size={20}/>
-                    )}
-                </TouchableOpacity>
-                
-                {timeElapsed ? (
-                    <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingRight: '5%' }} hours={timeElapsed.hours} minutes={timeElapsed.minutes} seconds={timeElapsed.seconds} />
-                ) : (
-                    <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingRight: '5%' }} >N/A</Text>
-                )}
-            </View>
+            
+            { !loaded ? (
+                <View style={{flex: 1, justifyContent: 'center'}}>
+                    <ActivityIndicator size={'large'} color={theme === 'light' ? 'black' : 'white'} />
+                </View>
 
-            <Divider startX={0} endX={1} colorsArray={ theme === 'light' ? ['#FFFFFF', '#000000', '#FFFFFF'] : ['#000000', '#FFFFFF', '#000000'] }/>
-
-            <View style={styles.userHeader}>
-                <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingLeft: '5%', marginRight: 'auto' }} >Users:</Text>
-                <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingRight: '5%' }} >{userList ? userList.length : 0}/5</Text>
-            </View>
-
-            <Divider startX={0} endX={1} colorsArray={ theme === 'light' ? ['#FFFFFF', '#000000', '#FFFFFF'] : ['#000000', '#FFFFFF', '#000000'] }/>
-
-            <View style={styles.userInfo}>
-
-                {userList && userList.map((username, index) => (
-                    <View style={styles.userInfo} key={index}>
-                        <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 17, paddingLeft: '5%', marginRight: 'auto', paddingVertical: '5%'}}>{username}</Text>
-                        <Divider startX={0} endX={1} colorsArray={ theme === 'light' ? ['#FFFFFF', '#000000', '#FFFFFF'] : ['#000000', '#FFFFFF', '#000000'] }/>
+            ): (
+                <>
+                <View style={styles.main}>
+                    <View style={styles.sessionInfo}>
+                        <TouchableOpacity onPress={() => setShowQRCode(true)} style={{ flexDirection: 'row', marginRight: 'auto', alignItems: 'center'}}>
+                            <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingLeft: '5%', paddingRight: '1%' }}>{theServerCode ? theServerCode : 'N/A'}</Text>
+                            { theServerCode && (
+                                <QRCode value={theServerCode} size={20}/>
+                            )}
+                        </TouchableOpacity>
+                        
+                        {timeElapsed ? (
+                            <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingRight: '5%' }} hours={timeElapsed.hours} minutes={timeElapsed.minutes} seconds={timeElapsed.seconds} />
+                        ) : (
+                            <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingRight: '5%' }} >N/A</Text>
+                        )}
                     </View>
-                ))}
 
-            </View>
+                    <Divider startX={0} endX={1} colorsArray={ theme === 'light' ? ['#FFFFFF', '#000000', '#FFFFFF'] : ['#000000', '#FFFFFF', '#000000'] }/>
 
-        </View>
-            
-        { hosting === 'true' ? (
-            <TouchableOpacity onPress={async () => await askLeave()} style={styles.endSessionButton}>
-                <Text style={{color: 'white', fontSize: 15, fontWeight: 'bold'}}>End Session</Text>
-            </TouchableOpacity>
-        ) : (
-            <TouchableOpacity onPress={async () => await askLeave()} style={styles.endSessionButton}>
-                <Text style={{color: 'white', fontSize: 15, fontWeight: 'bold'}}>Leave Session</Text>
-            </TouchableOpacity>
-        )}
-            
+                    <View style={styles.userHeader}>
+                        <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingLeft: '5%', marginRight: 'auto' }} >Users:</Text>
+                        <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 20, paddingRight: '5%' }} >{userList ? userList.length : 0}/5</Text>
+                    </View>
+
+                    <Divider startX={0} endX={1} colorsArray={ theme === 'light' ? ['#FFFFFF', '#000000', '#FFFFFF'] : ['#000000', '#FFFFFF', '#000000'] }/>
+
+                    <View style={styles.userInfo}>
+
+                        {userList && userList.map((user, index) => (
+                            <View style={styles.userInfo} key={index}>
+                                <View style={{flexDirection: 'row', alignItems: 'center', width: '100%', paddingRight: '5%'}}>
+                                    <Text style={{ marginRight: 'auto', color: theme === 'light' ? 'black' : 'white', fontSize: 17, paddingLeft: '5%', marginRight: 'auto', paddingVertical: '5%'}}>{user.username}</Text>
+                                    { hosting === 'true' && user.userId !== userId ? (
+                                        <TouchableOpacity onPress={() => kickUser(user.userId)}>
+                                            <Ionicons name="person-remove-outline" size={25} color={theme === 'light' ? 'black' : 'white'} />
+                                        </TouchableOpacity>
+                                    ) : (
+                                        <Text />
+                                    )}
+                                </View>
+                                
+                                <Divider startX={0} endX={1} colorsArray={ theme === 'light' ? ['#FFFFFF', '#000000', '#FFFFFF'] : ['#000000', '#FFFFFF', '#000000'] }/>
+                            </View>
+                        ))}
+
+                    </View>
+
+                </View>
+
+                { hosting === 'true' ? (
+                    <TouchableOpacity onPress={async () => await askLeave()} style={styles.endSessionButton}>
+                        <Text style={{color: 'white', fontSize: 15, fontWeight: 'bold'}}>End Session</Text>
+                    </TouchableOpacity>
+                ) : (
+                    <TouchableOpacity onPress={async () => await askLeave()} style={styles.endSessionButton}>
+                        <Text style={{color: 'white', fontSize: 15, fontWeight: 'bold'}}>Leave Session</Text>
+                    </TouchableOpacity>
+                )}
+
+                </>
+
+            )}
+
     </View>        
   );
 }

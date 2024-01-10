@@ -142,7 +142,6 @@ export default function Modal() {
 			backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424'
 		},
         header: {
-            // position: 'absolute',
             zIndex: 2,
             flexDirection: 'row',
             paddingTop: insets.top / 3,
@@ -173,7 +172,7 @@ export default function Modal() {
 			alignItems: 'center',
         },
         input: {
-            width: width * .45,
+            width: width * .5,
 			fontSize: 30,
 			borderColor: theme === 'light' ? 'black' : 'white',
 			borderRadius: 30,

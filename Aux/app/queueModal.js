@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { View, Text, StyleSheet, useColorScheme, useWindowDimensions, Alert, StatusBar, TouchableOpacity, ScrollView, Image } from 'react-native';
-import { refreshAsync } from 'expo-auth-session';
+import { View, Text, StyleSheet, useColorScheme, useWindowDimensions, StatusBar, TouchableOpacity, ScrollView, Image, ActivityIndicator } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,6 +10,7 @@ import Divider from "./divider";
 
 export default function Modal() {
 
+    const [loaded, setLoaded] = React.useState(false);
     const theme = useColorScheme();
     const {height, width} = useWindowDimensions();
     const [socket, setSocket] = React.useState(null);
@@ -44,6 +44,7 @@ export default function Modal() {
 
         theSocket.on("queueListUpdate", ({songs}) => {
             setQueueList(songs);
+            setLoaded(true);
         });
 
         return (() => {
@@ -149,24 +150,34 @@ export default function Modal() {
             <View style={styles.exitButton} />
         </View>
 
-        <ScrollView contentContainerStyle={{paddingBottom: insets.bottom}} scrollsToTop={true} showsVerticalScrollIndicator={true} style={styles.searchList}>
-            { queueList && queueList.map((item, index) => (
-                <TouchableOpacity activeOpacity={1} style={{flexDirection: 'column', width: '100%'}} key={index} >
-                    <TouchableOpacity activeOpacity={1} style={styles.searchSongInfo} >
-                        <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                            <Image style={styles.smallAlbumCover} source={{uri: item.image}} />
+        { !loaded ? (
+                <View style={{flex: 1, justifyContent: 'center'}}>
+                    <ActivityIndicator size={'large'} color={theme === 'light' ? 'black' : 'white'} />
+                </View>
 
-                            <View style={styles.songInfo}>
-                                <Text style={{fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white'}} >{sliceData(item.name, 30, false)}</Text>
-                                <Text style={{fontWeight: '500', color: theme === 'light' ? 'black' : 'white'}} >{sliceData(item.artists, 2, true)}</Text>
-                            </View>
+            ): (
 
-                        </View>
-                    </TouchableOpacity>
-                    <Divider startX={0} endX={1} colorsArray={ theme === 'light' ? ['#FFFFFF', '#000000', '#FFFFFF'] : ['#000000', '#FFFFFF', '#000000'] }/>
-                </TouchableOpacity>
-            ))}
-        </ScrollView>
+                <ScrollView contentContainerStyle={{paddingBottom: insets.bottom}} scrollsToTop={true} showsVerticalScrollIndicator={true} style={styles.searchList}>
+                    { queueList && queueList.map((item, index) => (
+                        <TouchableOpacity activeOpacity={1} style={{flexDirection: 'column', width: '100%'}} key={index} >
+                            <TouchableOpacity activeOpacity={1} style={styles.searchSongInfo} >
+                                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                                    <Image style={styles.smallAlbumCover} source={{uri: item.image}} />
+
+                                    <View style={styles.songInfo}>
+                                        <Text style={{fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white'}} >{sliceData(item.name, 30, false)}</Text>
+                                        <Text style={{fontWeight: '500', color: theme === 'light' ? 'black' : 'white'}} >{sliceData(item.artists, 2, true)}</Text>
+                                    </View>
+
+                                </View>
+                            </TouchableOpacity>
+                            <Divider startX={0} endX={1} colorsArray={ theme === 'light' ? ['#FFFFFF', '#000000', '#FFFFFF'] : ['#000000', '#FFFFFF', '#000000'] }/>
+                        </TouchableOpacity>
+                    ))}
+                </ScrollView>
+
+            )}
+        
     </View>
         
   );

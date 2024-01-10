@@ -47,6 +47,15 @@ export default () => {
                     }}
                 />
 
+                <Stack.Screen
+                    name="voteModal"
+                    options={{
+                        presentation: 'modal',
+                        animation: 'default',
+                        headerShown: false,
+                    }}
+                />
+
             </Stack>
 
         </SafeAreaProvider>

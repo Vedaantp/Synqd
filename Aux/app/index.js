@@ -15,6 +15,7 @@ export default function Page() {
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // variables
     const [login, setLogin] = React.useState(true);
+    // const [firstLoad, setFirstLoad] = React.useState(true);
     const [loading, setLoading] = React.useState(true);
     const [accountStatus, setAccountStatus] = React.useState(false);
 	const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
