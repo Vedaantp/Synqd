@@ -15,4 +15,4 @@ For this app, I used Expo React Native as my framework. I used many react native
 the creation of this app. To see more please look at the package.json for details about libraries used. 
 
 This app is connected to a server I created hosted on Heroku. For more information about the server please visit:
-https://github.com/Vedaantp/AuxServer
+https://github.com/Vedaantp/SynqdServer
