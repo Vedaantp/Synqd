@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { StyleSheet, StatusBar, Text, View, useColorScheme, TouchableOpacity, Alert, TextInput, ScrollView, Image, TouchableWithoutFeedback, Keyboard, Dimensions, Linking } from "react-native";
+import { StyleSheet, StatusBar, Text, View, useColorScheme, TouchableOpacity, Alert, TextInput, ScrollView, Image, TouchableWithoutFeedback, Keyboard, Dimensions, Linking, ActivityIndicator } from "react-native";
 import { Slider } from "@miblanchard/react-native-slider";
 import { MaterialIcons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { SimpleLineIcons } from '@expo/vector-icons';
+import { Octicons } from '@expo/vector-icons';
 import { refreshAsync } from 'expo-auth-session';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,6 +25,17 @@ function TimeDisplay({ style, milliseconds, }) {
     );
 }
 
+function OnScreenAlert({message, theme, style}) {
+    return (
+        <View style={style}>
+            <MaterialIcons name="playlist-add" size={50} color={theme === 'light' ? 'white' : 'black'} />
+            <Text style={{color: theme === 'light' ? 'white' : 'black'}}>{message}</Text>
+        </View>
+    )
+}
+
+
+
 export default function Page() {
 
 
@@ -40,6 +52,9 @@ export default function Page() {
     const [queueAlert, setQueueAlert] = React.useState(false);
     const searchBarRef = React.useRef(null);
     const [validToken, setValidToken] = React.useState(true);
+    const [votedUri, setVotedUri] = React.useState(null);
+    const [loaded, setLoaded] = React.useState(false);
+    const [searchLoaded, setSearchLoaded] = React.useState(true);
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
     const clientId = '43d48850732744018aff88a5692d03d5';
@@ -72,6 +87,7 @@ export default function Page() {
         newSocket.on('serverCreated', ({ serverCode }) => {
             console.log('Server created with code: ', serverCode);
             setServerCode(serverCode);
+            setLoaded(true);
 
             if (heartbeatInterval === null) {
                 heartbeatInterval = setInterval( async () => { await sendHeartbeat(newSocket, serverCode) }, 60000);
@@ -84,6 +100,7 @@ export default function Page() {
 
         newSocket.on("hostRejoined", () => {
             console.log("Host rejoined");
+            setLoaded(true);
 
             if (heartbeatInterval === null) {
                 heartbeatInterval = setInterval( async () => { await sendHeartbeat(newSocket, serverCode) }, 60000);
@@ -126,13 +143,9 @@ export default function Page() {
         newSocket.on("songVoted", ({songInfo}) => {
             console.log("Song voted", songInfo);
 
-            const handleRoutine = async (uri) => {
-                await handleAddQueue(uri);
-                await getQueue();
-            };
-
             if (songInfo) {
-                handleRoutine(uri);
+                setVotedUri(songInfo.uri);
+                handleAddQueue(songInfo.uri);
             }
         });
 
@@ -153,10 +166,10 @@ export default function Page() {
     React.useEffect(() => {
         sendSongInfo()
 
-        if (currentSong.uri === oldSong) {
-            getQueue();
-            oldSong = currentSong.uri;
-        }
+        // if (currentSong.uri === oldSong) {
+        //     getQueue();
+        //     oldSong = currentSong.uri;
+        // }
 
     }, [currentSong])
 
@@ -169,6 +182,11 @@ export default function Page() {
             searchBarRef.current.focus();
         }
     }, [isSearching])
+
+    React.useEffect(() => {
+        console.log("Upating queue");
+        getQueue();
+    }, [votedUri])
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // extra functions
@@ -231,6 +249,7 @@ export default function Page() {
     const leaveServer = async () => {
         const userId = await getValue("userId");
         const serverCode = await getValue("serverCode");
+        setLoaded(false);
         
         if (socket) {
             socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
@@ -391,7 +410,6 @@ export default function Page() {
     };
 
     const getQueue = async () => {
-        console.log("Getting the queue");
 
         await validateAuth();
 
@@ -400,6 +418,7 @@ export default function Page() {
         const endpoint = "https://api.spotify.com/v1/me/player/queue";
 
         const spotifyParams = {
+            method: "GET",
             headers: {
                 'Authorization': `Bearer ${accessToken}`,
             }
@@ -418,6 +437,7 @@ export default function Page() {
                 }));
 
                 if (socket) {
+                    console.log("Getting queue");
                     socket.emit("hostQueueList", {songs: songs, serverCode: serverCode});
                 }
 
@@ -456,6 +476,7 @@ export default function Page() {
                     }))
 
                     setSongList(songs);
+                    setSearchLoaded(true);
                 })
                 .catch((error) => {
                     console.error("Search error: ", error);
@@ -680,17 +701,14 @@ export default function Page() {
             .then((response) => {
                 if (response.ok) {
                     console.log("Successfully added song to queue");
-                    setQueueAlert(true);
-                    setTimeout(() => setQueueAlert(false), 750);
-                    getCurrentPlaying();
+                    
                 } else {
                     console.log("Failed to add song to queue", response.status, response.statusText);
                 }
             })
             .catch((error) => {
                 console.error("Queue error: ", error);
-            })
-
+            });
     };
 
     const handleSeek = async (milliseconds) => {
@@ -746,6 +764,8 @@ export default function Page() {
         const userId = await getValue("userId");
 
         if (socket) {
+            setQueueAlert(true);
+            setTimeout(() => setQueueAlert(false), 750);
             socket.emit("votingSong", {serverCode: serverCode, songInfo: item, userId: userId });
         }
     };
@@ -867,7 +887,7 @@ export default function Page() {
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: insets.bottom,
-            paddingTop: '15%'
+            // paddingTop: '15%'
         },
         playback: {
             flex: 1,
@@ -919,7 +939,7 @@ export default function Page() {
             justifyContent: 'center',
             alignItems: 'center',
             width: '50%',
-            paddingBottom: '15%'
+            // paddingBottom: '15%'
 
         },
         thumb: {
@@ -940,10 +960,7 @@ export default function Page() {
                     <StatusBar />
 
                     {queueAlert && (
-                        <View style={styles.queueAlert}>
-                            <MaterialIcons name="playlist-add" size={50} color={theme === 'light' ? 'white' : 'black'} />
-                            <Text style={{color: theme === 'light' ? 'white' : 'black'}}>Song Queued!</Text>
-                        </View>
+                        <OnScreenAlert style={styles.queueAlert} theme={theme} message="Song Requested!" />
                     )}
 
                     <View style={styles.header} >
@@ -960,17 +977,19 @@ export default function Page() {
                             onChangeText={setSearchParam}
                             keyboardAppearance={theme}
                             returnKeyType='search'
-                            onSubmitEditing={() => searchSong()}
+                            onSubmitEditing={() => {setSearchLoaded(false); searchSong();}}
                             onFocus={() => setSearchParam(null)}
                             clearTextOnFocus={true}
                         />
                         
                         <TouchableOpacity onPress={() => router.push('/sessionInfoCard')} style={styles.infoButton} >
-                            <SimpleLineIcons name="people" size={30} color={theme === 'light' ? 'black' : 'white'} />
+                            <Octicons name="three-bars" size={30} color={theme === 'light' ? 'black' : 'white'} />
                         </TouchableOpacity>
                     </View>
+                    
+                    {searchLoaded ? (
 
-                    <ScrollView contentContainerStyle={{paddingBottom: insets.bottom}} scrollsToTop={true} showsVerticalScrollIndicator={true} style={styles.searchList}>
+                        <ScrollView contentContainerStyle={{paddingBottom: insets.bottom}} scrollsToTop={true} showsVerticalScrollIndicator={true} style={styles.searchList}>
 
                         {songList && songList.map(item => (
                                 <TouchableOpacity activeOpacity={1} style={styles.searchSongInfo} key={item.uri} >
@@ -991,7 +1010,16 @@ export default function Page() {
                                 </TouchableOpacity>                                
                         ))}
 
-                    </ScrollView>
+                        </ScrollView>
+
+                    ): (
+
+                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                            <ActivityIndicator size={'large'} color={theme === 'light' ? 'black' : 'white'} />
+                        </View>
+
+                    )}
+                    
 
                 </View>
             </TouchableWithoutFeedback>
@@ -1001,7 +1029,16 @@ export default function Page() {
         return (
             <View style={styles.container}>
                 <StatusBar />
-    
+
+                {!loaded ? (
+
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                        <ActivityIndicator size={'large'} color={theme === 'light' ? 'black' : 'white'} />
+                    </View>
+
+                ) : (
+                    <>
+
                     <View style={styles.header} >
                         <TouchableOpacity style={styles.exitButton} onPress={async () => await askLeave()} >
                             <SimpleLineIcons name="logout" size={25} color={ theme === 'light' ? 'black' : 'white'} />
@@ -1021,7 +1058,7 @@ export default function Page() {
                         />
                         
                         <TouchableOpacity onPress={() => router.push('/sessionInfoCard')} style={styles.infoButton} >
-                            <SimpleLineIcons name="people" size={30} color={theme === 'light' ? 'black' : 'white'} />
+                            <Octicons name="three-bars" size={30} color={theme === 'light' ? 'black' : 'white'} />
                         </TouchableOpacity>
                     </View>    
     
@@ -1104,19 +1141,22 @@ export default function Page() {
                                 </TouchableOpacity>
     
                             </View>
-                        </View>
-                        
-                        <View style={styles.bottomGroup}>
-                            <TouchableOpacity onPress={() => router.push('/voteModal')} style={{marginRight: 'auto'}}>
-                                <MaterialCommunityIcons name="list-status" size={40} color={ theme === 'light' ? 'black' : 'white'} />
-                            </TouchableOpacity>
 
-                            <TouchableOpacity onPress={() => router.push('/queueModal')}>
-                                <MaterialIcons name="playlist-play" size={50} color={ theme === 'light' ? 'black' : 'white' } />
-                            </TouchableOpacity>
-                            
+                            <View style={styles.bottomGroup}>
+                                <TouchableOpacity onPress={() => router.push('/voteModal')} style={{marginRight: 'auto'}}>
+                                    <MaterialCommunityIcons name="list-status" size={40} color={ theme === 'light' ? 'black' : 'white'} />
+                                </TouchableOpacity>
+
+                                <TouchableOpacity onPress={() => router.push('/queueModal')}>
+                                    <MaterialIcons name="playlist-play" size={50} color={ theme === 'light' ? 'black' : 'white' } />
+                                </TouchableOpacity>
+                            </View>
                         </View>
                     </View>
+                    </>
+ 
+                )}
+    
             </View>
         );
 

@@ -4,7 +4,7 @@ import { makeRedirectUri, useAuthRequest, exchangeCodeAsync, refreshAsync } from
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, Text, TouchableOpacity, View, Image, StatusBar, useColorScheme, Alert } from "react-native";
 import { router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import io from 'socket.io-client';
 import { MaterialIcons } from '@expo/vector-icons';
 
@@ -25,6 +25,7 @@ export default function Page() {
     const scopes = ['user-read-email', 'user-read-private', 'user-read-playback-state', 'user-modify-playback-state', 'user-read-currently-playing'];
     const redirectURI = makeRedirectUri({ native: 'auxapp://callback' });
     const theme = useColorScheme();
+    const insets = useSafeAreaInsets();
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // on mount functions
@@ -434,6 +435,7 @@ export default function Page() {
 			backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424'
 		},
 		image: {
+            marginTop: insets.top,
 			width: 100,
 			height: 100,
 		},
@@ -470,53 +472,44 @@ export default function Page() {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // screen
-    if (!loading) {
+    
+    return (
+        <SafeAreaView style={styles.container}>
+            <StatusBar />
 
-        return (
-            <SafeAreaView style={styles.container}>
-                <StatusBar />
-    
-                <Image style={styles.image} source={require("../images/AuxSmall.png")} />
-    
-                <View style={styles.host}>
-                    <TouchableOpacity style={ {alignItems: 'center'} } onPress={async () => await hostRoute()} >
-                        <MaterialIcons name="speaker-phone" size={75} color={theme === 'light' ? 'black' : 'white'} />
-                        <Text style={styles.text} >Host</Text>
+            <Image style={styles.image} source={require("../images/Synqd-Logos/Logo.png")} />
+
+            <View style={styles.host}>
+                <TouchableOpacity style={ {alignItems: 'center'} } onPress={async () => await hostRoute()} >
+                    <MaterialIcons name="speaker-phone" size={75} color={theme === 'light' ? 'black' : 'white'} />
+                    <Text style={styles.text} >Host</Text>
+                </TouchableOpacity>
+            </View>
+
+            <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 17, paddingHorizontal: '3%'}} >Or</Text>
+
+            <View style={styles.join}>
+                <TouchableOpacity style={{alignItems: 'center'}} onPress={async () => await joinRoute()} >
+                    <MaterialIcons name="person-add" size={75} color={theme === 'light' ? 'black' : 'white'} />
+                    <Text style={styles.text} >Join</Text>
+                </TouchableOpacity>
+            </View>
+
+            <View style={styles.log}>
+                <View style={styles.spotifyButton}>
+                    <Image style={styles.spotifyIcon} source={require("../images/spotify-icon-green.png")} />
+                    <TouchableOpacity style={styles.spotifyButton} onPress={async () => {
+                        if (login) {
+                            promptAsync();
+                        } else {
+                            await logout()
+                        }
+                    }}>
+                        <Text style={styles.text}>{login ? 'Log In' : 'Log Out'}</Text>
                     </TouchableOpacity>
                 </View>
-    
-                <Text style={{ color: theme === 'light' ? 'black' : 'white', fontSize: 17, paddingHorizontal: '3%'}} >Or</Text>
-    
-                <View style={styles.join}>
-                    <TouchableOpacity style={{alignItems: 'center'}} onPress={async () => await joinRoute()} >
-                        <MaterialIcons name="person-add" size={75} color={theme === 'light' ? 'black' : 'white'} />
-                        <Text style={styles.text} >Join</Text>
-                    </TouchableOpacity>
-                </View>
-    
-                <View style={styles.log}>
-                    <View style={styles.spotifyButton}>
-                        <Image style={styles.spotifyIcon} source={require("../images/spotify-icon-green.png")} />
-                        <TouchableOpacity style={styles.spotifyButton} onPress={async () => {
-                            if (login) {
-                                promptAsync();
-                            } else {
-                                await logout()
-                            }
-                        }}>
-                            <Text style={styles.text}>{login ? 'Log In' : 'Log Out'}</Text>
-                        </TouchableOpacity>
-                    </View>
-                </View>
-    
-            </SafeAreaView>
-        );
+            </View>
 
-    } else {
-        return(
-            <SafeAreaView style={styles.container}>
-                <Text style={{color: 'black'}} >Make a loading screen</Text>
-            </SafeAreaView>
-        );
-    }
+        </SafeAreaView>
+    );
 }

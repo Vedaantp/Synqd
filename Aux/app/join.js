@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { StyleSheet, StatusBar, Text, View, useColorScheme, TouchableOpacity, Alert, TextInput, ScrollView, Image, TouchableWithoutFeedback, Keyboard, Dimensions, Linking } from "react-native";
+import { StyleSheet, StatusBar, Text, View, useColorScheme, TouchableOpacity, Alert, TextInput, ScrollView, Image, TouchableWithoutFeedback, Keyboard, Dimensions, Linking, ActivityIndicator } from "react-native";
 import { Slider } from "@miblanchard/react-native-slider";
 import { MaterialIcons } from '@expo/vector-icons';
 import { SimpleLineIcons } from '@expo/vector-icons';
+import { Octicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { refreshAsync } from 'expo-auth-session';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -35,6 +36,8 @@ export default function Page() {
     const [songList, setSongList] = React.useState(null);
     const [currentSong, setCurrentSong] = React.useState({name: '', uri: '', image: '', artists: [], artistsURI: [], timestamp: 0});
     const [isSearching, setSearching] = React.useState(false);
+    const [loaded, setLoaded] = React.useState(false);
+    const [searchLoaded, setSearchLoaded] = React.useState(true);
     const searchBarRef = React.useRef(null);
     const insets = useSafeAreaInsets();
 	const theme = useColorScheme();
@@ -197,6 +200,7 @@ export default function Page() {
         const serverCode = await getValue("serverCode");
 
         if (userId === myUserId) {
+            setLoaded(true);
 
             if (heartbeatInterval === null) {
                 heartbeatInterval = setInterval(() => {sendHeartbeat(newSocket, serverCode)}, 60000);
@@ -207,6 +211,7 @@ export default function Page() {
     const leaveServer = async () => {
         const userId = await getValue("userId");
         const serverCode = await getValue("serverCode");
+        setLoaded(false);
 
         socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
 
@@ -243,6 +248,7 @@ export default function Page() {
         const myUserId = await getValue("userId");
 
         if (userId === myUserId) {
+            setLoaded(false);
             await AsyncStorage.removeItem("serverCode");
             await AsyncStorage.setItem("hosting", "false");
             await AsyncStorage.setItem("rejoining", "false");
@@ -252,6 +258,7 @@ export default function Page() {
     };
 
     const hostLeft = async () => {
+        setLoaded(false);
         await AsyncStorage.removeItem("serverCode");
         await AsyncStorage.setItem("hosting", "false");
         await AsyncStorage.setItem("rejoining", "false");
@@ -410,6 +417,7 @@ export default function Page() {
                     }))
 
                     setSongList(songs);
+                    setSearchLoaded(true);
 
                 })
                 .catch((error) => {
@@ -545,7 +553,7 @@ export default function Page() {
             justifyContent: 'space-between',
             alignItems: 'center',
             marginBottom: insets.bottom,
-            paddingTop: '25%'
+            // paddingTop: '25%'
         },
         playback: {
             flex: 1,
@@ -589,7 +597,8 @@ export default function Page() {
             justifyContent: 'center',
             alignItems: 'center',
             width: '50%',
-            paddingBottom: '35%'
+            // pad: '35%',
+            // paddingBottom: '35%'
 
         },
         thumb: {
@@ -624,7 +633,7 @@ export default function Page() {
                             onChangeText={setSearchParam}
                             keyboardAppearance={theme}
                             returnKeyType='search'
-                            onSubmitEditing={() => searchSong()}
+                            onSubmitEditing={() => { setSearchLoaded(false); searchSong(); }}
                             onFocus={() => setSearchParam(null)}
                             clearTextOnFocus={true}
                         />
@@ -634,7 +643,9 @@ export default function Page() {
                         </TouchableOpacity>
                     </View>
 
-                    <ScrollView contentContainerStyle={{paddingBottom: insets.bottom}} scrollsToTop={true} showsVerticalScrollIndicator={true} style={styles.searchList}>
+                    {searchLoaded ? (
+
+                        <ScrollView contentContainerStyle={{paddingBottom: insets.bottom}} scrollsToTop={true} showsVerticalScrollIndicator={true} style={styles.searchList}>
 
                         {songList && songList.map(item => (
                                 <TouchableOpacity activeOpacity={1} style={styles.searchSongInfo} key={item.uri} >
@@ -655,7 +666,15 @@ export default function Page() {
                                 </TouchableOpacity>                                
                         ))}
 
-                    </ScrollView>
+                        </ScrollView>
+
+                    ) : (
+
+                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                            <ActivityIndicator size={'large'} color={theme === 'light' ? 'black' : 'white'} />
+                        </View>
+
+                    )}
 
                 </View>
             </TouchableWithoutFeedback>
@@ -666,99 +685,110 @@ export default function Page() {
             <View style={styles.container}>
 
                 <StatusBar />
-    
-                <View style={styles.header} >
-                    <TouchableOpacity style={styles.exitButton} onPress={async () => await askLeave()} >
-                        <SimpleLineIcons name="logout" size={25} color={ theme === 'light' ? 'black' : 'white'} />
-                    </TouchableOpacity>
 
-                    <TextInput
-                        style={styles.searchBar}
-                        placeholder='Search...'
-                        placeholderTextColor={theme === 'light' ? 'black' : 'white'}
-                        value={searchParam}
-                        onChangeText={setSearchParam}
-                        keyboardAppearance={theme}
-                        returnKeyType='search'
-                        onSubmitEditing={() => searchSong()}
-                        onFocus={() => setSearching(true)}
-                        clearTextOnFocus={true}
-                    />
-                    
-                    <TouchableOpacity onPress={() => router.push('/sessionInfoCard')} style={styles.infoButton} >
-                        <SimpleLineIcons name="people" size={30} color={theme === 'light' ? 'black' : 'white'} />
-                    </TouchableOpacity>
-                </View>    
+                {!loaded ? (
 
-                <View style={styles.main}>
-    
-                        <View style={styles.playback} >
-                            <TouchableWithoutFeedback onPress={() => {
-                                if (currentSong.image) {
-                                    Linking.openURL(currentSong.songURL);
-                                } else {
-                                    Linking.openURL('spotify://');
-                                }
-                            }}> 
-                                <View style={styles.albumCoverShadow} >
-                                    <Image  style={styles.albumCover} source={currentSong.image ? {uri :currentSong.image} : require("../images/spotify-icon.png")} />
-                                </View>
-                            </TouchableWithoutFeedback>
-                            
-    
-                            <View style={styles.playbackInfo}>
-                                <TouchableOpacity onPress={() => {
-                                    if (currentSong.uri) {
+                    <View style={{ flex: 1, justifyContent: 'center' }}>
+                        <ActivityIndicator size={'large'} color={theme === 'light' ? 'black' : 'white'} />
+                    </View>
+
+                ) : (
+                    <>
+                        <View style={styles.header} >
+                            <TouchableOpacity style={styles.exitButton} onPress={async () => await askLeave()} >
+                                <SimpleLineIcons name="logout" size={25} color={ theme === 'light' ? 'black' : 'white'} />
+                            </TouchableOpacity>
+
+                            <TextInput
+                                style={styles.searchBar}
+                                placeholder='Search...'
+                                placeholderTextColor={theme === 'light' ? 'black' : 'white'}
+                                value={searchParam}
+                                onChangeText={setSearchParam}
+                                keyboardAppearance={theme}
+                                returnKeyType='search'
+                                onSubmitEditing={() => searchSong()}
+                                onFocus={() => setSearching(true)}
+                                clearTextOnFocus={true}
+                            />
+                        
+                            <TouchableOpacity onPress={() => router.push('/sessionInfoCard')} style={styles.infoButton} >
+                                <SimpleLineIcons name="people" size={30} color={theme === 'light' ? 'black' : 'white'} />
+                            </TouchableOpacity>
+                        </View>    
+
+                        <View style={styles.main}>
+        
+                            <View style={styles.playback} >
+                                <TouchableWithoutFeedback onPress={() => {
+                                    if (currentSong.image) {
                                         Linking.openURL(currentSong.songURL);
                                     } else {
                                         Linking.openURL('spotify://');
                                     }
-                                }}>
-                                    <Text style={{fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white' }} >{currentSong.name ? sliceData(currentSong.name, 35, false) : 'Spotify Not Playing'}</Text>
-                                </TouchableOpacity>
-    
-                                <TouchableOpacity onPress={() => {
-                                    if (currentSong.artistsURI[0]) {
-                                        Linking.openURL(currentSong.artistsURI[0]);
-                                    } else {
-                                        Linking.openURL('spotify://');
-                                    }
-                                }}>
-                                    <Text style={{color: theme === 'light' ? 'black' : 'white' }} >{currentSong.artists.join(', ') ? sliceData(currentSong.artists, 2, true) : 'Please start playing on Spotify'}</Text>
-                                </TouchableOpacity>
-                            </View>
-    
-                            <Slider
-                                containerStyle={styles.slider}
-                                minimumValue={0}
-                                maximumValue={currentSong.duration}
-                                value={currentSong.timestamp}
-                                trackClickable={false}
-                                minimumTrackTintColor={theme === 'light' ? '#000000' : '#FFFFFF'}
-                                maximumTrackTintColor={theme === 'light' ? '#A1A1A1' : "#5E5E5E"}
-                                thumbTintColor={theme === 'light' ? 'black' : "white"}
-                                thumbStyle={styles.thumb}
-                                disabled={true}
-                            />
-                                                  
-                            <View style={styles.sliderInfo}>
-                                <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', alignSelf: 'flex-start'}} milliseconds={currentSong.timestamp} />
-                                <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', alignSelf: 'flex-end'}} milliseconds={currentSong.duration} />
+                                }}> 
+                                    <View style={styles.albumCoverShadow} >
+                                        <Image  style={styles.albumCover} source={currentSong.image ? {uri :currentSong.image} : require("../images/spotify-icon.png")} />
+                                    </View>
+                                </TouchableWithoutFeedback>
+                                
+        
+                                <View style={styles.playbackInfo}>
+                                    <TouchableOpacity onPress={() => {
+                                        if (currentSong.uri) {
+                                            Linking.openURL(currentSong.songURL);
+                                        } else {
+                                            Linking.openURL('spotify://');
+                                        }
+                                    }}>
+                                        <Text style={{fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white' }} >{currentSong.name ? sliceData(currentSong.name, 35, false) : 'Spotify Not Playing'}</Text>
+                                    </TouchableOpacity>
+        
+                                    <TouchableOpacity onPress={() => {
+                                        if (currentSong.artistsURI[0]) {
+                                            Linking.openURL(currentSong.artistsURI[0]);
+                                        } else {
+                                            Linking.openURL('spotify://');
+                                        }
+                                    }}>
+                                        <Text style={{color: theme === 'light' ? 'black' : 'white' }} >{currentSong.artists.join(', ') ? sliceData(currentSong.artists, 2, true) : 'Please start playing on Spotify'}</Text>
+                                    </TouchableOpacity>
+                                </View>
+        
+                                <Slider
+                                    containerStyle={styles.slider}
+                                    minimumValue={0}
+                                    maximumValue={currentSong.duration}
+                                    value={currentSong.timestamp}
+                                    trackClickable={false}
+                                    minimumTrackTintColor={theme === 'light' ? '#000000' : '#FFFFFF'}
+                                    maximumTrackTintColor={theme === 'light' ? '#A1A1A1' : "#5E5E5E"}
+                                    thumbTintColor={theme === 'light' ? 'black' : "white"}
+                                    thumbStyle={styles.thumb}
+                                    disabled={true}
+                                />
+                                                    
+                                <View style={styles.sliderInfo}>
+                                    <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', alignSelf: 'flex-start'}} milliseconds={currentSong.timestamp} />
+                                    <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', alignSelf: 'flex-end'}} milliseconds={currentSong.duration} />
+                                </View>
+
+                                <View style={styles.bottomGroup}>
+                                    <TouchableOpacity onPress={() => router.push('/voteModal')} style={{marginRight: 'auto'}}>
+                                        <MaterialCommunityIcons name="list-status" size={40} color={ theme === 'light' ? 'black' : 'white'} />
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity onPress={() => router.push('/queueModal')}>
+                                        <MaterialIcons name="playlist-play" size={50} color={ theme === 'light' ? 'black' : 'white' } />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
+                    </>
 
-                        <View style={styles.bottomGroup}>
-                            <TouchableOpacity onPress={() => router.push('/voteModal')} style={{marginRight: 'auto'}}>
-                                <MaterialCommunityIcons name="list-status" size={40} color={ theme === 'light' ? 'black' : 'white'} />
-                            </TouchableOpacity>
-
-                            <TouchableOpacity onPress={() => router.push('/queueModal')}>
-                                <MaterialIcons name="playlist-play" size={50} color={ theme === 'light' ? 'black' : 'white' } />
-                            </TouchableOpacity>
-                            
-                        </View>
-                    </View>
-
+                )}
+    
+                
             </View>
 
         );

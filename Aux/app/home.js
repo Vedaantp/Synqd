@@ -4,14 +4,10 @@ import { refreshAsync } from 'expo-auth-session';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { MaterialIcons } from '@expo/vector-icons';
-import LinearGradient from 'react-native-linear-gradient';
 import { router } from 'expo-router';
 import io from 'socket.io-client';
 import { BarCodeScanner } from 'expo-barcode-scanner';
 
-
-import Test from './test';
-import Divider from './divider';
 
 export default function Page() {
 

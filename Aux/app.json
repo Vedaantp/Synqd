@@ -1,25 +1,24 @@
 {
   "expo": {
-    "name": "Auxx",
+    "name": "Synq'd",
     "slug": "Aux",
     "version": "1.0.0",
     "scheme": "auxapp",
     "orientation": "portrait",
     // "icon": "./assets/icon.png",
-    "icon": "./images/AuxLogo.png",
+    "icon": "./images/Synqd-Logos/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       // "image": "./assets/splash.png",
-      "image": "./images/AuxFull.png",
-      "backgroundColor": "#191414",
-      "resizeMode": "contain"
+      "image": "./images/Synqd-Logos/splash.png",
+      "resizeMode": "cover"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.aux.app",
+      "bundleIdentifier": "com.synqd.app",
       "config": {
         "usesNonExemptEncryption": false
       },
@@ -29,8 +28,9 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        // "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./images/Synqd-Logos/adaptive-icon.png"
+        // "backgroundColor": "#ffffff"
       },
       "package": "com.aux.app"
     },

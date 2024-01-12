@@ -95,7 +95,7 @@ export default function Modal() {
             console.log('Double tap!');
             // Add your logic for double tap action here
 
-            handleAddVote(item);
+            handleVote(item);
 
             // Reset last tap time
             setLastTap(0);
@@ -200,7 +200,7 @@ export default function Modal() {
                                     <Image style={styles.smallAlbumCover} source={{ uri: item.image }} />
 
                                     <View style={styles.songInfo}>
-                                        <Text style={{ fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white' }} >{sliceData(item.name, 30, false)}</Text>
+                                        <Text style={{ fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white' }} >{sliceData(item.name, 25, false)}</Text>
                                         <Text style={{ fontWeight: '500', color: theme === 'light' ? 'black' : 'white' }} >{sliceData(item.artists, 2, true)}</Text>
                                     </View>
                                 </View>
@@ -209,12 +209,12 @@ export default function Modal() {
                                     {item.votes.includes(userId) ? (
                                         <>
                                         <Text style={{ paddingHorizontal: '1%', color: theme === 'light' ? 'black' : 'white'}}>{item.votes.length}</Text>
-                                        <AntDesign name="heart" size={24} color='red' />
+                                        <AntDesign name="like1" size={24} color='#426dff' />
                                         </>
                                     ): (
                                         <>
                                         <Text style={{ paddingHorizontal: '1%', color: theme === 'light' ? 'black' : 'white'}}>{item.votes.length}</Text>
-                                        <AntDesign name="heart" size={24} color={theme === 'light' ? 'black' : 'white'} />
+                                        <AntDesign name="like1" size={24} color={theme === 'light' ? 'black' : 'white'} />
                                         </>
                                     )}
                                 </TouchableOpacity>
