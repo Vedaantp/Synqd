@@ -1,18 +1,18 @@
-For latest build:
-eas build:run -p ios --latest
+# About the App
+This app allows users to either host or join a session where members of a session can request and vote on
+songs to add to the host's Spotify queue. The songs are automatically added to the host's queue. To host a session, 
+a user must be a Spotify Premium member. To join a session, a user must be logged into their spotify account, free or 
+premium. The app shows the current song playing (the host has playback control), the host's queue, a list of songs that were
+requested with the amount of votes for each song, and users are able to search for songs within the app. Sessions are limited
+to a maximum of 5 users including the host currently.
 
-For list of all builds:
-eas build:run -p ios
+# Get the app here
+To get the app, please visit this link to download the app through the Apple App Store.
+(Add link here)
 
-For building simulator:
-eas build --profile development-simulator --platform ios
-eas build --profile development --platform ios
-eas build --profile development --platform android
+# Tools
+For this app, I used Expo React Native as my framework. I used many react native and expo libraries to aid
+the creation of this app. To see more please look at the package.json for details about libraries used. 
 
-Future Features:
-1) Make it so if there is less than 3 users in server it doesnt do vote phase but instead adds all songs to queue
-2) Make it so host can choose how long the searching and voting phases are
-3) Make it so host can kick people out of server
-4) Make it so if there is a tie it adds all songs that were tied into the queue
-5) Add a QR code host can show people for them to join
-6) Allow users to vote to skip
+This app is connected to a server I created hosted on Heroku. For more information about the server please visit:
+https://github.com/Vedaantp/AuxServer
