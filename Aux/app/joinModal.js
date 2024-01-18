@@ -142,9 +142,17 @@ export default function Modal() {
 			backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424'
 		},
         header: {
+            ...Platform.select({
+                ios: {
+                  paddingTop: insets.top / 3
+                },
+                android: {
+                    paddingTop: insets.top * 2,
+                },
+            }),
             zIndex: 2,
             flexDirection: 'row',
-            paddingTop: insets.top / 3,
+            // paddingTop: insets.top / 3,
             marginLeft: insets.left, 
             marginRight: insets.right, 
             width: '100%',

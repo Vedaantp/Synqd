@@ -185,8 +185,16 @@ export default function Card() {
 			backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424',
 		},
         header: {
+            ...Platform.select({
+                ios: {
+                  paddingTop: insets.top
+                },
+                android: {
+                    paddingTop: insets.top * 2,
+                },
+            }),
             flexDirection: 'row',
-            paddingTop: insets.top,
+            // paddingTop: insets.top,
             marginLeft: insets.left, 
             marginRight: insets.right, 
             alignItems: 'center',

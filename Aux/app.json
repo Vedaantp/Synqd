@@ -17,7 +17,7 @@
       "**/*"
     ],
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "com.synqd.app",
       "config": {
         "usesNonExemptEncryption": false
@@ -32,7 +32,7 @@
         "foregroundImage": "./images/Synqd-Logos/adaptive-icon.png"
         // "backgroundColor": "#ffffff"
       },
-      "package": "com.aux.app"
+      "package": "com.synqd.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"

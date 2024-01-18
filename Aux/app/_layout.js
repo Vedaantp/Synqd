@@ -1,8 +1,6 @@
 import { Stack } from "expo-router/stack";
-import { Button, useColorScheme } from "react-native";
+import { useColorScheme } from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { MaterialIcons } from '@expo/vector-icons';
 
 export default () => {
     const theme = useColorScheme();
@@ -33,7 +31,7 @@ export default () => {
                     name="queueModal"
                     options={{
                         presentation: 'modal',
-                        animation: 'default',
+                        animation: 'slide_from_bottom',
                         headerShown: false,
                     }}
                 />
@@ -42,7 +40,7 @@ export default () => {
                     name="sessionInfoCard"
                     options={{
                         presentation: 'card',
-                        animation: 'slide_from_left',
+                        animation: 'slide_from_right',
                         headerShown: false,
                     }}
                 />

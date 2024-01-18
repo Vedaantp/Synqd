@@ -7,8 +7,8 @@ requested with the amount of votes for each song, and users are able to search f
 to a maximum of 5 users including the host currently.
 
 # Get the app here
-To get the app, please visit this link to download the app through the Apple App Store.
-(Add link here)
+To request a TestFlight version of this app please email vedupatel2011@gmail.com to get access to the app. Once the app
+is released to the Apple App Store, the link to find it will be available here. Thank you.
 
 # Tools
 For this app, I used Expo React Native as my framework. I used many react native and expo libraries to aid

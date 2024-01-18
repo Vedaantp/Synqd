@@ -1,6 +1,6 @@
 import * as React from 'react';
 import * as WebBrowser from 'expo-web-browser';
-import { makeRedirectUri, useAuthRequest, exchangeCodeAsync, refreshAsync } from 'expo-auth-session';
+import { makeRedirectUri, useAuthRequest, exchangeCodeAsync, refreshAsync, Prompt } from 'expo-auth-session';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StyleSheet, Text, TouchableOpacity, View, Image, StatusBar, useColorScheme, Alert } from "react-native";
 import { router } from 'expo-router';
@@ -15,7 +15,6 @@ export default function Page() {
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // variables
     const [login, setLogin] = React.useState(true);
-    // const [firstLoad, setFirstLoad] = React.useState(true);
     const [loading, setLoading] = React.useState(true);
     const [accountStatus, setAccountStatus] = React.useState(false);
 	const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
@@ -435,7 +434,15 @@ export default function Page() {
 			backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424'
 		},
 		image: {
-            marginTop: insets.top,
+            ...Platform.select({
+                ios: {
+                  marginTop: insets.top
+                },
+                android: {
+                    marginTop: insets.top * 2,
+                },
+            }),
+            // marginTop: insets.top,
 			width: 100,
 			height: 100,
 		},
@@ -472,7 +479,7 @@ export default function Page() {
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // screen
-    
+
     return (
         <SafeAreaView style={styles.container}>
             <StatusBar />

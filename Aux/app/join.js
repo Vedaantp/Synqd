@@ -3,7 +3,6 @@ import { StyleSheet, StatusBar, Text, View, useColorScheme, TouchableOpacity, Al
 import { Slider } from "@miblanchard/react-native-slider";
 import { MaterialIcons } from '@expo/vector-icons';
 import { SimpleLineIcons } from '@expo/vector-icons';
-import { Octicons } from '@expo/vector-icons';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { refreshAsync } from 'expo-auth-session';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';

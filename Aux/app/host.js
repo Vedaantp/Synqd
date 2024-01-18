@@ -63,7 +63,6 @@ export default function Page() {
     const { height: deviceHeight, width: deviceWidth } = Dimensions.get('window');
     let heartbeatInterval = null;
     let getCurrent = null;
-    let oldSong = null;
     /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
@@ -165,12 +164,6 @@ export default function Page() {
 
     React.useEffect(() => {
         sendSongInfo()
-
-        // if (currentSong.uri === oldSong) {
-        //     getQueue();
-        //     oldSong = currentSong.uri;
-        // }
-
     }, [currentSong])
 
     React.useEffect(() => {
@@ -815,8 +808,16 @@ export default function Page() {
             })
         },
         header: {
+            ...Platform.select({
+                ios: {
+                  paddingTop: insets.top
+                },
+                android: {
+                    paddingTop: insets.top * 2,
+                },
+            }),
             flexDirection: 'row',
-            paddingTop: insets.top,
+            // paddingTop: insets.top,
             marginLeft: insets.left, 
             marginRight: insets.right, 
             alignItems: 'center',

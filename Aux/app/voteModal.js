@@ -18,7 +18,6 @@ export default function Modal() {
     const [voteList, setVoteList] = React.useState(null);
     const [lastTap, setLastTap] = React.useState(0);
     const [userId, setUserId] = React.useState(null);
-    const [songSelected, setSongSelected] = React.useState(null);
     const insets = useSafeAreaInsets();
     const serverUrl = 'https://aux-server-88bcd769a4b4.herokuapp.com';
 
@@ -123,8 +122,16 @@ export default function Modal() {
             backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424'
         },
         header: {
+            ...Platform.select({
+                ios: {
+                  paddingTop: insets.top / 3
+                },
+                android: {
+                    paddingTop: insets.top * 2,
+                },
+            }),
             flexDirection: 'row',
-            paddingTop: insets.top / 3,
+            // paddingTop: insets.top / 3,
             marginLeft: insets.left,
             marginRight: insets.right,
             alignItems: 'center',
