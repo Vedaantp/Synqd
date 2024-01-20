@@ -2,7 +2,7 @@
   "expo": {
     "name": "Synq'd",
     "slug": "Aux",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "scheme": "auxapp",
     "orientation": "portrait",
     // "icon": "./assets/icon.png",

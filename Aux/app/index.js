@@ -213,7 +213,15 @@ export default function Page() {
 
         if (accountStatus) {
             if (await checkServerStatus()) {
-                router.replace('/host');
+                await validateAuth();
+                if (!login){
+                    router.replace('/host');
+                } else {
+                    let title = "Sign In";
+                    let message = "Please sign in to your spotify account before trying to Host or Join a session. Thank you.";
+                    await sendAlert(title, message);
+                    return;
+                }
             } else {
                 let title = "Oops...";
                 let message = "The servers are not currently online right now. Please give our team time to fix the issues. Thank you.";

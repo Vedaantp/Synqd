@@ -59,7 +59,17 @@ export default function Modal() {
                 await AsyncStorage.setItem("serverCode", data);
             }
 
-            router.replace('/join');
+            await validateAuth();
+            if (!login){
+                router.replace('/join');
+            } else {
+                await AsyncStorage.removeItem("serverCode");
+
+                let title = "Sign In";
+                let message = "Please sign in to your spotify account before trying to Host or Join a session. Thank you.";
+                await sendAlert(title, message);
+                return;
+            }
 
         } else {
             let title = "Oops...";
@@ -90,7 +100,17 @@ export default function Modal() {
                 await AsyncStorage.setItem("serverCode", serverCode);
             }
 
-            router.replace('/join');
+            await validateAuth();
+            if (!login){
+                router.replace('/join');
+            } else {
+                await AsyncStorage.removeItem("serverCode");
+                
+                let title = "Sign In";
+                let message = "Please sign in to your spotify account before trying to Host or Join a session. Thank you.";
+                await sendAlert(title, message);
+                return;
+            }
 
         } else {
             let title = "Oops...";
