@@ -9,12 +9,12 @@ to a maximum of 5 users including the host currently.
 # Get the app here
 The app is currently using the development mode of Spotify's API. Please email vedupatel2011@gmail.com and include your Spotify account's
 email address to get access for use of this apps API. Once Spotify accepts the extension request for use of their API, this app will be available to all users in US and Canada.
-The app is available on the Apple App Store for iPhones with iOS 13 and above here:
+The app is available on the Apple App Store for iPhones with iOS 13 and above in the US and Canada markets here:
 https://apps.apple.com/us/app/synqd/id6476221500
 
 # Tools
 For this app, I used Expo React Native as my framework. I used many react native and expo libraries to aid
 the creation of this app. To see more please look at the package.json for details about libraries used. 
 
-This app is connected to a server I created hosted on Heroku. For more information about the server please visit:
+This app is connected to a Node JS server I created, which is hosted on Heroku. For more information about the server please visit:
 https://github.com/Vedaantp/SynqdServer
