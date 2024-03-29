@@ -25,11 +25,11 @@ function TimeDisplay({ style, milliseconds, }) {
     );
 }
 
-function OnScreenAlert({message, theme, style}) {
+function OnScreenAlert({ message, theme, style }) {
     return (
         <View style={style}>
             <MaterialIcons name="playlist-add" size={50} color={theme === 'light' ? 'white' : 'black'} />
-            <Text style={{color: theme === 'light' ? 'white' : 'black'}}>{message}</Text>
+            <Text style={{ color: theme === 'light' ? 'white' : 'black' }}>{message}</Text>
         </View>
     )
 }
@@ -59,7 +59,7 @@ export default function Page() {
     const tokenEndpoint = 'https://accounts.spotify.com/api/token';
     const clientId = '43d48850732744018aff88a5692d03d5';
     const insets = useSafeAreaInsets();
-	const theme = useColorScheme();
+    const theme = useColorScheme();
     const { height: deviceHeight, width: deviceWidth } = Dimensions.get('window');
     let heartbeatInterval = null;
     let getCurrent = null;
@@ -89,11 +89,11 @@ export default function Page() {
             setLoaded(true);
 
             if (heartbeatInterval === null) {
-                heartbeatInterval = setInterval( async () => { await sendHeartbeat(newSocket, serverCode) }, 60000);
+                heartbeatInterval = setInterval(async () => { await sendHeartbeat(newSocket, serverCode) }, 60000);
             }
 
             if (getCurrent === null) {
-                getCurrent = setInterval( async () => { await getCurrentPlaying() }, 1000);
+                getCurrent = setInterval(async () => { await getCurrentPlaying() }, 1000);
             }
         });
 
@@ -102,11 +102,11 @@ export default function Page() {
             setLoaded(true);
 
             if (heartbeatInterval === null) {
-                heartbeatInterval = setInterval( async () => { await sendHeartbeat(newSocket, serverCode) }, 60000);
+                heartbeatInterval = setInterval(async () => { await sendHeartbeat(newSocket, serverCode) }, 60000);
             }
 
             if (getCurrent === null) {
-                getCurrent = setInterval( async () => { await getCurrentPlaying() }, 1000);
+                getCurrent = setInterval(async () => { await getCurrentPlaying() }, 1000);
             }
         });
 
@@ -139,7 +139,7 @@ export default function Page() {
             console.log("Heartbeat received: ", data);
         });
 
-        newSocket.on("songVoted", ({songInfo}) => {
+        newSocket.on("songVoted", ({ songInfo }) => {
             console.log("Song voted", songInfo);
 
             if (songInfo) {
@@ -148,7 +148,7 @@ export default function Page() {
             }
         });
 
-        newSocket.on("cannotVoteSelf", ({userId}) => {
+        newSocket.on("cannotVoteSelf", ({ userId }) => {
             checkVoteSelf(userId);
         });
 
@@ -202,7 +202,7 @@ export default function Page() {
             socket.emit("songInfo", { serverCode: serverCode, userId: userId, songInfo: currentSong });
         }
 
-    };    
+    };
 
     const sliceData = (data, minSlice, isArray) => {
         if (data.length > minSlice) {
@@ -211,7 +211,7 @@ export default function Page() {
             } else {
                 return data.slice(0, minSlice) + ' ...';
             }
-            
+
         } else {
             if (isArray) {
                 return data.join(', ');
@@ -243,7 +243,7 @@ export default function Page() {
         const userId = await getValue("userId");
         const serverCode = await getValue("serverCode");
         setLoaded(false);
-        
+
         if (socket) {
             socket.emit('leaveServer', { serverCode: serverCode, userId: userId });
         }
@@ -278,7 +278,7 @@ export default function Page() {
                     text: "No",
                     style: "cancel",
                     onPress: () => {
-                        
+
                     },
                 },
                 {
@@ -431,7 +431,7 @@ export default function Page() {
 
                 if (socket) {
                     console.log("Getting queue");
-                    socket.emit("hostQueueList", {songs: songs, serverCode: serverCode});
+                    socket.emit("hostQueueList", { songs: songs, serverCode: serverCode });
                 }
 
             })
@@ -498,7 +498,7 @@ export default function Page() {
                 };
 
                 const response = await fetch(endpoint, spotifyParams);
-                
+
                 try {
                     if (response.status === 200) {
                         const data = await response.json();
@@ -694,7 +694,7 @@ export default function Page() {
             .then((response) => {
                 if (response.ok) {
                     console.log("Successfully added song to queue");
-                    
+
                 } else {
                     console.log("Failed to add song to queue", response.status, response.statusText);
                 }
@@ -759,7 +759,7 @@ export default function Page() {
         if (socket) {
             setQueueAlert(true);
             setTimeout(() => setQueueAlert(false), 750);
-            socket.emit("votingSong", {serverCode: serverCode, songInfo: item, userId: userId });
+            socket.emit("votingSong", { serverCode: serverCode, songInfo: item, userId: userId });
         }
     };
 
@@ -784,7 +784,7 @@ export default function Page() {
             position: 'absolute',
             flexDirection: 'row',
             alignSelf: 'center',
-            justifyContent: 'center', 
+            justifyContent: 'center',
             alignItems: 'center',
             top: '15%',
             width: '45%',
@@ -794,23 +794,23 @@ export default function Page() {
 
             ...Platform.select({
                 ios: {
-                  shadowColor: theme == 'light' ? 'black' : 'white',
-                  shadowOpacity: 0.75,
-                  shadowRadius: 10,
-                  shadowOffset: {
-                    width: 0,
-                    height: 0,
-                  },
+                    shadowColor: theme == 'light' ? 'black' : 'white',
+                    shadowOpacity: 0.75,
+                    shadowRadius: 10,
+                    shadowOffset: {
+                        width: 0,
+                        height: 0,
+                    },
                 },
                 android: {
-                  elevation: 5,
+                    elevation: 5,
                 },
             })
         },
         header: {
             ...Platform.select({
                 ios: {
-                  paddingTop: insets.top
+                    paddingTop: insets.top
                 },
                 android: {
                     paddingTop: insets.top * 2,
@@ -818,20 +818,20 @@ export default function Page() {
             }),
             flexDirection: 'row',
             // paddingTop: insets.top,
-            marginLeft: insets.left, 
-            marginRight: insets.right, 
+            marginLeft: insets.left,
+            marginRight: insets.right,
             alignItems: 'center',
             width: '100%',
             borderBottomWidth: 1,
             borderColor: theme === 'light' ? 'black' : 'white',
             paddingBottom: "3%",
-            backgroundColor: theme === 'light' ? '#FFFFFF': '#242424',
+            backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424',
             shadowColor: theme == 'light' ? 'black' : 'white',
             shadowOpacity: 0.25,
             shadowRadius: 10,
             shadowOffset: {
-            width: 0,
-            height: 5,
+                width: 0,
+                height: 5,
             },
             elevation: 5
         },
@@ -852,7 +852,7 @@ export default function Page() {
             borderRadius: 25,
             borderWidth: 1,
             color: theme === 'light' ? 'black' : 'white',
-            
+
         },
         infoButton: {
             flex: 1,
@@ -877,6 +877,7 @@ export default function Page() {
         smallAlbumCover: {
             width: 0.125 * deviceWidth,
             height: 0.125 * deviceWidth,
+            // marginRight: '5%'
         },
         songInfo: {
             flexDirection: 'column',
@@ -901,13 +902,13 @@ export default function Page() {
             height: 0.8 * deviceWidth,
         },
         albumCoverShadow: {
-            backgroundColor: theme === 'light' ? '#FFFFFF': '#242424',
+            backgroundColor: theme === 'light' ? '#FFFFFF' : '#242424',
             shadowColor: theme == 'light' ? 'black' : 'white',
             shadowOpacity: 0.25,
             shadowRadius: 10,
             shadowOffset: {
-            width: 0,
-            height: 0,
+                width: 0,
+                height: 0,
             },
             elevation: 5
         },
@@ -917,7 +918,7 @@ export default function Page() {
             flexDirection: 'column',
             marginTop: '5%'
         },
-        slider: { 
+        slider: {
             width: '80%',
             marginTop: '1%'
         },
@@ -929,7 +930,7 @@ export default function Page() {
         },
         playbackControls: {
             paddingHorizontal: '20%',
-            marginTop: '2%', 
+            marginTop: '2%',
             flexDirection: 'row',
             alignItems: 'center',
             justifyContent: 'center',
@@ -949,12 +950,24 @@ export default function Page() {
             width: 10,
             height: 10,
         },
+        spotifyIcon: {
+            width: 20,
+            height: 20,
+            alignSelf: 'center',
+            marginRight: '1%',
+            marginLeft: '5%'
+        },
+        spotifyLogo: {
+            marginTop: '5%',
+            width: '25%',
+            height: '5%'
+        }
     });
 
     /////////////////////////////////////////////////////////////////////////////////////////////////
     // screen
 
-    if (isSearching) { 
+    if (isSearching) {
         return (
             <TouchableWithoutFeedback activeOpacity={1} style={styles.container}>
                 <View style={styles.container}>
@@ -965,7 +978,7 @@ export default function Page() {
                     )}
 
                     <View style={styles.header} >
-                        <TouchableOpacity style={styles.exitButton} onPress={() => {setSearching(false); setSearchParam(null); setSongList(null); Keyboard.dismiss();}} >
+                        <TouchableOpacity style={styles.exitButton} onPress={() => { setSearching(false); setSearchParam(null); setSongList(null); Keyboard.dismiss(); }} >
                             <MaterialIcons name="arrow-back" size={35} color={theme === 'light' ? 'black' : 'white'} />
                         </TouchableOpacity>
 
@@ -978,49 +991,50 @@ export default function Page() {
                             onChangeText={setSearchParam}
                             keyboardAppearance={theme}
                             returnKeyType='search'
-                            onSubmitEditing={() => {setSearchLoaded(false); searchSong();}}
+                            onSubmitEditing={() => { setSearchLoaded(false); searchSong(); }}
                             onFocus={() => setSearchParam(null)}
                             clearTextOnFocus={true}
                         />
-                        
+
                         <TouchableOpacity onPress={() => router.push('/sessionInfoCard')} style={styles.infoButton} >
                             <Octicons name="three-bars" size={30} color={theme === 'light' ? 'black' : 'white'} />
                         </TouchableOpacity>
                     </View>
-                    
+
                     {searchLoaded ? (
 
-                        <ScrollView contentContainerStyle={{paddingBottom: insets.bottom}} scrollsToTop={true} showsVerticalScrollIndicator={true} style={styles.searchList}>
+                        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom }} scrollsToTop={true} showsVerticalScrollIndicator={true} style={styles.searchList}>
 
-                        {songList && songList.map(item => (
+                            {songList && songList.map(item => (
                                 <TouchableOpacity activeOpacity={1} style={styles.searchSongInfo} key={item.uri} >
-                                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                                        <Image style={styles.smallAlbumCover} source={{uri: item.image}} />
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Image style={styles.smallAlbumCover} source={{ uri: item.image }} />
+                                        <Image style={styles.spotifyIcon} source={require("../images/spotify-icon-green.png")} />
 
                                         <View style={styles.songInfo}>
-                                            <Text style={{fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white'}} >{sliceData(item.name, 30, false)}</Text>
-                                            <Text style={{fontWeight: '500', color: theme === 'light' ? 'black' : 'white'}} >{sliceData(item.artist, 2, true)}</Text>
+                                            <Text style={{ fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white' }} >{sliceData(item.name, 23, false)}</Text>
+                                            <Text style={{ fontWeight: '500', color: theme === 'light' ? 'black' : 'white' }} >{sliceData(item.artist, 2, true)}</Text>
                                         </View>
 
                                     </View>
-                                    
 
-                                    <TouchableOpacity onPress={async () => await handleAddVote(item) }>
+
+                                    <TouchableOpacity onPress={async () => await handleAddVote(item)}>
                                         <MaterialIcons name="playlist-add" size={35} color={theme === 'light' ? 'black' : 'white'} />
                                     </TouchableOpacity>
-                                </TouchableOpacity>                                
-                        ))}
+                                </TouchableOpacity>
+                            ))}
 
                         </ScrollView>
 
-                    ): (
+                    ) : (
 
                         <View style={{ flex: 1, justifyContent: 'center' }}>
                             <ActivityIndicator size={'large'} color={theme === 'light' ? 'black' : 'white'} />
                         </View>
 
                     )}
-                    
+
 
                 </View>
             </TouchableWithoutFeedback>
@@ -1040,124 +1054,129 @@ export default function Page() {
                 ) : (
                     <>
 
-                    <View style={styles.header} >
-                        <TouchableOpacity style={styles.exitButton} onPress={async () => await askLeave()} >
-                            <SimpleLineIcons name="logout" size={25} color={ theme === 'light' ? 'black' : 'white'} />
-                        </TouchableOpacity>
-    
-                        <TextInput
-                            style={styles.searchBar}
-                            placeholder='Search...'
-                            placeholderTextColor={theme === 'light' ? 'black' : 'white'}
-                            value={searchParam}
-                            onChangeText={setSearchParam}
-                            keyboardAppearance={theme}
-                            returnKeyType='search'
-                            onSubmitEditing={() => searchSong()}
-                            onFocus={() => setSearching(true)}
-                            clearTextOnFocus={true}
-                        />
-                        
-                        <TouchableOpacity onPress={() => router.push('/sessionInfoCard')} style={styles.infoButton} >
-                            <Octicons name="three-bars" size={30} color={theme === 'light' ? 'black' : 'white'} />
-                        </TouchableOpacity>
-                    </View>    
-    
-                    <View style={styles.main}>
-    
-                        <View style={styles.playback} >
-                            <TouchableWithoutFeedback onPress={() => {
-                                if (currentSong.image) {
-                                    Linking.openURL(currentSong.songURL);
-                                } else {
-                                    Linking.openURL('spotify://');
-                                }
-                            }}> 
-                                <View style={styles.albumCoverShadow} >
-                                    <Image  style={styles.albumCover} source={currentSong.image ? {uri :currentSong.image} : require("../images/spotify-icon.png")} />
-                                </View>
-                            </TouchableWithoutFeedback>
-                            
-    
-                            <View style={styles.playbackInfo}>
-                                <TouchableOpacity style={{paddingBottom: '1%'}} onPress={() => {
-                                    if (currentSong.uri) {
+                        <View style={styles.header} >
+                            <TouchableOpacity style={styles.exitButton} onPress={async () => await askLeave()} >
+                                <SimpleLineIcons name="logout" size={25} color={theme === 'light' ? 'black' : 'white'} />
+                            </TouchableOpacity>
+
+                            <TextInput
+                                style={styles.searchBar}
+                                placeholder='Search...'
+                                placeholderTextColor={theme === 'light' ? 'black' : 'white'}
+                                value={searchParam}
+                                onChangeText={setSearchParam}
+                                keyboardAppearance={theme}
+                                returnKeyType='search'
+                                onSubmitEditing={() => searchSong()}
+                                onFocus={() => setSearching(true)}
+                                clearTextOnFocus={true}
+                            />
+
+                            <TouchableOpacity onPress={() => router.push('/sessionInfoCard')} style={styles.infoButton} >
+                                <Octicons name="three-bars" size={30} color={theme === 'light' ? 'black' : 'white'} />
+                            </TouchableOpacity>
+                        </View>
+
+                        <View style={styles.main}>
+
+                            {/* <Image style={styles.spotifyLogo} source={require("../images/spotify-logo.png")} /> */}
+
+                            <View style={styles.playback} >
+                                <TouchableWithoutFeedback onPress={() => {
+                                    if (currentSong.image) {
                                         Linking.openURL(currentSong.songURL);
                                     } else {
                                         Linking.openURL('spotify://');
                                     }
                                 }}>
-                                    <Text style={{fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white' }} >{currentSong.name ? sliceData(currentSong.name, 35, false) : 'Spotify Not Playing'}</Text>
-                                </TouchableOpacity>
-    
-                                <TouchableOpacity onPress={() => {
-                                    if (currentSong.artistsURI[0]) {
-                                        Linking.openURL(currentSong.artistsURI[0]);
-                                    } else {
-                                        Linking.openURL('spotify://');
-                                    }
-                                }}>
-                                    <Text style={{color: theme === 'light' ? 'black' : 'white' }} >{currentSong.artists.join(', ') ? sliceData(currentSong.artists, 2, true) : 'Please start playing on Spotify'}</Text>
-                                </TouchableOpacity>
-                            </View>
-    
-                            <Slider
-                                // style={styles.slider}
-                                containerStyle={styles.slider}
-                                minimumValue={0}
-                                maximumValue={currentSong.duration}
-                                value={currentSong.timestamp}
-                                onSlidingComplete={async (value) => await handleSeek(value) }
-                                trackClickable={false}
-                                minimumTrackTintColor={theme === 'light' ? '#000000' : '#FFFFFF'}
-                                maximumTrackTintColor={theme === 'light' ? '#A1A1A1' : "#5E5E5E"}
-                                thumbTintColor={theme === 'light' ? 'black' : "white"}
-                                thumbStyle={styles.thumb}
-                                step={1}
-                            />
-                                                  
-                            <View style={styles.sliderInfo}>
-                                <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', alignSelf: 'flex-start'}} milliseconds={currentSong.duration ? currentSong.timestamp : currentSong.duration} />
-                                <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', alignSelf: 'flex-end'}} milliseconds={currentSong.duration} />
-                            </View>
-                            
-                            
-                            <View style={styles.playbackControls}>
-                                <TouchableOpacity style={{marginRight: 'auto'}} onPress={async () => await handlePrev()}>
-                                    <MaterialIcons name="skip-previous" size={55} color={ theme === 'light' ? 'black' : 'white' } />
-                                </TouchableOpacity>
-    
-                                {!isPaused ? (
-                                    <TouchableOpacity style={{paddingHorizontal: '5%'}} onPress={async () => await handlePause()}>
-                                        <MaterialIcons name="pause" size={65} color={ theme === 'light' ? 'black' : 'white' } />
-                                    </TouchableOpacity>
-                                ) : (
-                                    <TouchableOpacity style={{paddingHorizontal: '5%'}} onPress={async () => await handleResume()}>
-                                        <MaterialIcons name="play-arrow" size={65} color={ theme === 'light' ? 'black' : 'white' } />
-                                    </TouchableOpacity>
-                                )}
-    
-                                <TouchableOpacity style={{marginLeft: 'auto'}} onPress={async () => await handleNext()}>
-                                    <MaterialIcons name="skip-next" size={55} color={ theme === 'light' ? 'black' : 'white' } />
-                                </TouchableOpacity>
-    
-                            </View>
+                                    <View style={styles.albumCoverShadow} >
+                                        <Image style={styles.albumCover} source={currentSong.image ? { uri: currentSong.image } : require("../images/spotify-icon.png")} />
+                                    </View>
+                                </TouchableWithoutFeedback>
 
-                            <View style={styles.bottomGroup}>
-                                <TouchableOpacity onPress={() => router.push('/voteModal')} style={{marginRight: 'auto'}}>
-                                    <MaterialCommunityIcons name="list-status" size={40} color={ theme === 'light' ? 'black' : 'white'} />
-                                </TouchableOpacity>
 
-                                <TouchableOpacity onPress={() => router.push('/queueModal')}>
-                                    <MaterialIcons name="playlist-play" size={50} color={ theme === 'light' ? 'black' : 'white' } />
-                                </TouchableOpacity>
+                                <View style={styles.playbackInfo}>
+
+                                    <TouchableOpacity style={{ paddingBottom: '1%', flexDirection: 'row' }} onPress={() => {
+                                        if (currentSong.uri) {
+                                            Linking.openURL(currentSong.songURL);
+                                        } else {
+                                            Linking.openURL('spotify://');
+                                        }
+                                    }}>
+                                        <Image style={styles.spotifyIcon} source={require("../images/spotify-icon-green.png")} />
+                                        <Text style={{ fontWeight: 'bold', color: theme === 'light' ? 'black' : 'white' }} >{currentSong.name ? sliceData(currentSong.name, 23, false) : 'Spotify Not Playing'}</Text>
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity style={{ flexDirection: 'row' }} onPress={() => {
+                                        if (currentSong.artistsURI[0]) {
+                                            Linking.openURL(currentSong.artistsURI[0]);
+                                        } else {
+                                            Linking.openURL('spotify://');
+                                        }
+                                    }}>
+                                        {/* <Image style={styles.spotifyIcon} source={require("../images/spotify-icon-green.png")} /> */}
+                                        <Text style={{ color: theme === 'light' ? 'black' : 'white' }} >{currentSong.artists.join(', ') ? sliceData(currentSong.artists, 2, true) : 'Please start playing on Spotify'}</Text>
+                                    </TouchableOpacity>
+                                </View>
+
+                                <Slider
+                                    // style={styles.slider}
+                                    containerStyle={styles.slider}
+                                    minimumValue={0}
+                                    maximumValue={currentSong.duration}
+                                    value={currentSong.timestamp}
+                                    onSlidingComplete={async (value) => await handleSeek(value)}
+                                    trackClickable={false}
+                                    minimumTrackTintColor={theme === 'light' ? '#000000' : '#FFFFFF'}
+                                    maximumTrackTintColor={theme === 'light' ? '#A1A1A1' : "#5E5E5E"}
+                                    thumbTintColor={theme === 'light' ? 'black' : "white"}
+                                    thumbStyle={styles.thumb}
+                                    step={1}
+                                />
+
+                                <View style={styles.sliderInfo}>
+                                    <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', alignSelf: 'flex-start' }} milliseconds={currentSong.duration ? currentSong.timestamp : currentSong.duration} />
+                                    <TimeDisplay style={{ color: theme === 'light' ? 'black' : 'white', alignSelf: 'flex-end' }} milliseconds={currentSong.duration} />
+                                </View>
+
+
+                                <View style={styles.playbackControls}>
+                                    <TouchableOpacity style={{ marginRight: 'auto' }} onPress={async () => await handlePrev()}>
+                                        <MaterialIcons name="skip-previous" size={55} color={theme === 'light' ? 'black' : 'white'} />
+                                    </TouchableOpacity>
+
+                                    {!isPaused ? (
+                                        <TouchableOpacity style={{ paddingHorizontal: '5%' }} onPress={async () => await handlePause()}>
+                                            <MaterialIcons name="pause" size={65} color={theme === 'light' ? 'black' : 'white'} />
+                                        </TouchableOpacity>
+                                    ) : (
+                                        <TouchableOpacity style={{ paddingHorizontal: '5%' }} onPress={async () => await handleResume()}>
+                                            <MaterialIcons name="play-arrow" size={65} color={theme === 'light' ? 'black' : 'white'} />
+                                        </TouchableOpacity>
+                                    )}
+
+                                    <TouchableOpacity style={{ marginLeft: 'auto' }} onPress={async () => await handleNext()}>
+                                        <MaterialIcons name="skip-next" size={55} color={theme === 'light' ? 'black' : 'white'} />
+                                    </TouchableOpacity>
+
+                                </View>
+
+                                <View style={styles.bottomGroup}>
+                                    <TouchableOpacity onPress={() => router.push('/voteModal')} style={{ marginRight: 'auto' }}>
+                                        <MaterialCommunityIcons name="list-status" size={40} color={theme === 'light' ? 'black' : 'white'} />
+                                    </TouchableOpacity>
+
+                                    <TouchableOpacity onPress={() => router.push('/queueModal')}>
+                                        <MaterialIcons name="playlist-play" size={50} color={theme === 'light' ? 'black' : 'white'} />
+                                    </TouchableOpacity>
+                                </View>
                             </View>
                         </View>
-                    </View>
                     </>
- 
+
                 )}
-    
+
             </View>
         );
 
