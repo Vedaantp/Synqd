@@ -7,9 +7,7 @@ requested with the amount of votes for each song, and users are able to search f
 to a maximum of 5 users including the host currently.
 
 # Get the app here
-The app is currently using the development mode of Spotify's API. Please email vedupatel2011@gmail.com and include your Spotify account's
-email address to get access for use of this apps API. Once Spotify accepts the extension request for use of their API, this app will be available to all users in US and Canada.
-The app is available on the Apple App Store for iPhones with iOS 13 and above in the US and Canada markets here:
+The app is available in US and Canada markets in the IOS App Store.
 https://apps.apple.com/us/app/synqd/id6476221500
 
 # Tools
